@@ -1,0 +1,52 @@
+.mobile-week-detail{display:none}
+.calendar-event-button{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.calendar-event-button span{display:block}
+@media (max-width:760px){
+  .wrap{padding:12px 10px 28px}
+  .app-header{padding:18px;border-radius:16px}
+  .brand-lockup{align-items:flex-start}
+  .brand-lockup h1{font-size:1.35rem;line-height:1.15;letter-spacing:-.025em}
+  .brand-lockup p{font-size:.82rem}
+  .club-logo{width:54px;height:54px;flex:none}
+  .management-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .management-actions>button{min-height:44px}
+  .management-actions span{grid-column:1/-1;width:auto}
+  .view-switch{width:100%}
+  .view-switch button{min-height:44px}
+  .week-toggle{min-height:64px}
+  .week-toggle b{font-size:.9rem}
+  .toggle-state{white-space:normal;text-align:right;max-width:90px}
+  .week-detail{overflow:visible;padding:8px}
+  .desktop-week-detail{display:none}
+  .mobile-week-detail{display:grid;gap:9px}
+  .mobile-day{overflow:hidden;border:1px solid #d8e2ee;border-radius:12px;background:#fff}
+  .mobile-day>header{display:flex;justify-content:space-between;gap:8px;padding:11px 12px;background:#eef5ff}
+  .mobile-day>header strong{display:block;color:#193666;font-size:.95rem}
+  .mobile-day>header span{display:block;color:#526b8d;font-size:.7rem}
+  .mobile-mow{align-self:start;padding:4px 7px;border-radius:7px;background:#fff1a2;color:#745900;font-size:.66rem}
+  .mobile-place{padding:8px 10px 10px;border-top:1px solid #e5edf6}
+  .mobile-place h3{display:flex;justify-content:space-between;gap:5px;margin:0 0 7px;color:#244a88;font-size:.8rem}
+  .mobile-place h3 small{font-size:.67rem;font-weight:600;color:#66758c}
+  .mobile-event{display:grid;grid-template-columns:72px minmax(0,1fr);gap:1px 7px;width:100%;min-height:50px;margin:6px 0;padding:8px 9px;border:1px solid #a6dbc1;border-left:4px solid #14825f;border-radius:8px;background:#e6f6ec;color:#0f513d;font:inherit;text-align:left;cursor:pointer}
+  .mobile-event-time{grid-row:1/3;align-self:center;font-size:.7rem;font-weight:800;white-space:nowrap}
+  .mobile-event-title{font-size:.78rem;font-weight:800;overflow-wrap:anywhere}
+  .mobile-event-meta{font-size:.68rem;color:#347560}
+  .mobile-event.game{border-color:#b7cfec;border-left-color:#244a88;background:#eaf3ff;color:#193666}
+  .mobile-event.game .mobile-event-meta{color:#47648d}
+  .mobile-event.special{border-color:#eed278;border-left-color:#d2a207;background:#fff7d7;color:#685000}
+  .mobile-event.pending{border:2px dashed #e78521;border-left:4px solid #e78521;background:#fff2dc;color:#9a4f0b}
+  .mobile-event.unresolved{border-color:#efb8b8;border-left-color:#c63838;background:#fff0f0;color:#9e2626}
+  .mobile-free{margin:0;color:#8a9bb0;font-size:.72rem}
+  .calendar-grid{display:grid;grid-template-columns:minmax(0,1fr);overflow:visible}
+  .calendar-day{min-height:0}
+  .calendar-day li{font-size:.8rem}
+  .calendar-day li span{font-size:.73rem}
+  .modal-backdrop{align-items:flex-end;padding:0}
+  .modal-card,.modal-card.admin{width:100%;max-height:92dvh;padding:20px 16px 28px;border-radius:16px 16px 0 0}
+  .modal-card .close{min-width:44px;min-height:44px;top:4px;right:4px}
+  .modal-card dl{grid-template-columns:90px 1fr;font-size:.83rem}
+  .modal-card dd{overflow-wrap:anywhere}
+  .modal-card .primary,.modal-card .secondary,.request-list button{min-height:44px}
+  .modal-card input,.modal-card select,.modal-card textarea{min-height:44px;font-size:16px}
+  .source-list{max-height:none;overflow:visible}
+}
