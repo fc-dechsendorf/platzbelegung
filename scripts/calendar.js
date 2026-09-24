@@ -159,6 +159,14 @@
     });
     app.querySelector('[data-new-event]')?.addEventListener('click', () => { selectedEvent = null; modal = 'new-event'; render(); }); app.querySelector('[data-admin-panel]')?.addEventListener('click', () => { modal = 'dashboard'; render(); });
     app.querySelector('[data-bfv-panel]')?.addEventListener('click', () => { modal = 'bfv-sources'; render(); });
+    const inviteForm = app.querySelector('[data-invite-manager]');
+    if (inviteForm && modal === 'dashboard' && role === 'admin') {
+      inviteForm.querySelector('button').textContent = 'Einmallink erzeugen';
+      const output = document.createElement('div');
+      output.dataset.inviteLink = '';
+      output.hidden = true;
+      inviteForm.after(output);
+    }
     const managerList = app.querySelector('[data-manager-list]');
     if (managerList && role === 'admin') window.Cloud.listManagers()
       .then((items) => {
@@ -171,9 +179,26 @@
       event.preventDefault();
       const email = String(new FormData(event.currentTarget).get('email')).trim();
       try {
-        await window.Cloud.inviteManager(email);
-        alert(`Einladung an ${email} wurde angefordert.`);
-        render();
+        const invitation = await window.Cloud.inviteManager(email);
+        const output = app.querySelector('[data-invite-link]');
+        output.hidden = false;
+        output.replaceChildren();
+        const hint = document.createElement('p');
+        hint.className = 'access-note';
+        hint.textContent = `Link für ${email}: Nur privat an diese Person weitergeben. Wer den Link besitzt, kann den Zugang aktivieren. Der Link ist einmalig und verfällt nach etwa einer Stunde.`;
+        const link = document.createElement('input');
+        link.type = 'text';
+        link.readOnly = true;
+        link.value = invitation.actionLink;
+        link.setAttribute('aria-label', `Einladungslink für ${email}`);
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.textContent = 'Link kopieren';
+        copy.onclick = async () => {
+          try { await navigator.clipboard.writeText(link.value); copy.textContent = 'Kopiert'; }
+          catch { link.select(); copy.textContent = 'Link markieren und manuell kopieren'; }
+        };
+        output.append(hint, link, copy);
       } catch (error) { alert(`Einladung fehlgeschlagen: ${error.message}`); }
     });
     const mowingList = app.querySelector('[data-mowing-list]');
