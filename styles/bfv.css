@@ -9,3 +9,14 @@
 .source-list .checkline{display:flex;align-items:center;gap:8px}
 .source-list .checkline input{width:auto;margin:0}
 .source-error{color:#a42929}
+.mowing-status{margin:6px 0 0;color:#896900;font-size:.78rem;font-weight:700}
+.event.manual:not(.pending):not(.unresolved){background:#fff7d7;border-color:#eed278;border-left-color:#d2a207}
+.event.manual:not(.pending):not(.unresolved) b,.event.manual:not(.pending):not(.unresolved) span{color:#685000}
+.calendar-day li.manual:not(.pending):not(.unresolved){background:#fff7d7;border-left-color:#d2a207;color:#685000}
+.calendar-day li.manual:not(.pending):not(.unresolved) span{color:#806400}
+.mobile-event.manual:not(.pending):not(.unresolved){background:#fff7d7;border-color:#eed278;border-left-color:#d2a207;color:#685000}
+.mobile-event.manual:not(.pending):not(.unresolved) .mobile-event-meta{color:#806400}
+.mow:not(.empty){background:#0fa45a;color:#fff}
+.mow-note{background:#e1f7e9;color:#176b3b}
+.mobile-mow{background:#d8f2df!important;color:#176b3b!important}
+.bfv-conflict{padding:10px 12px;border:1px solid #efb8b8;border-radius:8px;background:#fff0f0;color:#9e2626;font-weight:700}
