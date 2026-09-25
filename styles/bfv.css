@@ -20,3 +20,9 @@
 .mow-note{background:#e1f7e9;color:#176b3b}
 .mobile-mow{background:#d8f2df!important;color:#176b3b!important}
 .bfv-conflict{padding:10px 12px;border:1px solid #efb8b8;border-radius:8px;background:#fff0f0;color:#9e2626;font-weight:700}
+.event.special:not(.pending):not(.unresolved){background:#f1eafe;border-color:#d7c4f5;border-left-color:#7c3fc1}
+.event.special:not(.pending):not(.unresolved) b,.event.special:not(.pending):not(.unresolved) span{color:#51257f}
+.calendar-day li.special:not(.pending):not(.unresolved){background:#f1eafe;border-left-color:#7c3fc1;color:#51257f}
+.calendar-day li.special:not(.pending):not(.unresolved) span{color:#684294}
+.mobile-event.special:not(.pending):not(.unresolved){background:#f1eafe;border-color:#d7c4f5;border-left-color:#7c3fc1;color:#51257f}
+.mobile-event.special:not(.pending):not(.unresolved) .mobile-event-meta{color:#684294}
