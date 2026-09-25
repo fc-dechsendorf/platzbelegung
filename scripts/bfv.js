@@ -73,9 +73,8 @@
       const location = record.LOCATION || '', home = homeLocation(location);
       if (!home && location.trim()) return null;
       const category = /Pokale|Pokal/i.test(summary) ? 'Pokal' : /Freundschaft/i.test(summary) ? 'Freundschaftsspiel' : 'Liga';
-      const placeNumber = location.match(/(?:^|[, ])Platz\s*([123])\b/i)?.[1];
-      const place = home ? ({ '1': 'A', '2': 'B', '3': 'C' }[placeNumber] || 'A') : 'A';
-      return { id: `bfv-${record.UID || `${begin.date}-${begin.time}-${summary}`}`, date: begin.date, from: begin.time, to: end.time, name: summary.split(/, (?:Meisterschaften|Pokale|Freundschaft)/i)[0], category, status: home ? 'Heimspiel' : 'Ort offen', place, location: location || 'Keine Ortsangabe im BFV-iCal', source: sourceItem.team, sourceIds: [sourceItem.id], uid: record.UID || '' };
+      // A ist nur der neutrale Startpunkt unserer Verteilung, keine BFV-Platzzuweisung.
+      return { id: `bfv-${record.UID || `${begin.date}-${begin.time}-${summary}`}`, date: begin.date, from: begin.time, to: end.time, name: summary.split(/, (?:Meisterschaften|Pokale|Freundschaft)/i)[0], category, status: home ? 'Heimspiel' : 'Ort offen', place: 'A', location: location || 'Keine Ortsangabe im BFV-iCal', source: sourceItem.team, sourceIds: [sourceItem.id], uid: record.UID || '' };
     }).filter(Boolean);
   }
   async function refresh(options = {}) {
