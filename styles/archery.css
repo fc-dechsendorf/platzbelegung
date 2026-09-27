@@ -1,0 +1,32 @@
+.event.archery {
+  z-index: 3;
+  background: #edf0f3;
+  border-color: #aeb7c2;
+  border-left-color: #6e7784;
+}
+.event.archery b,
+.event.archery span { color: #394453; }
+.event.archery.right { left: 50%; right: 7px; margin: 0; }
+.event.archery-parallel { right: 50%; margin-right: 3px; }
+.event.archery.archery-game { border-style: dashed; }
+.calendar-day li.archery,
+.mobile-event.archery {
+  background: #edf0f3;
+  border-color: #aeb7c2;
+  border-left-color: #6e7784;
+  color: #394453;
+}
+.calendar-day li.archery span,
+.mobile-event.archery .mobile-event-meta { color: #586474; }
+[data-theme="dark"] .event.archery,
+[data-theme="dark"] .calendar-day li.archery,
+[data-theme="dark"] .mobile-event.archery {
+  background: #303b4a;
+  border-color: #718093;
+  border-left-color: #a8b4c2;
+  color: #edf1f5;
+}
+[data-theme="dark"] .event.archery b,
+[data-theme="dark"] .event.archery span,
+[data-theme="dark"] .calendar-day li.archery span,
+[data-theme="dark"] .mobile-event.archery .mobile-event-meta { color: #edf1f5; }
