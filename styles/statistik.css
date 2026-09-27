@@ -10,6 +10,9 @@
 .stats-year>button:hover{background:var(--club-blue-pale)}
 .stats-year>button:focus-visible,.stats-back:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 .stats-year-body{padding:13px 16px 17px;border-top:1px solid var(--line)}
+.stats-organization{margin:13px 0 20px;padding:13px 14px;border:1px solid var(--line);border-radius:10px}
+.stats-organization:last-child{margin-bottom:0}
+.stats-organization h3{margin:0 0 10px;color:var(--club-blue-deep);font-size:1rem}
 .stats-note,.stats-empty{margin:4px 0 12px;color:var(--muted)}
 .stats-table-wrap{width:100%;overflow:auto}
 .stats-table{border-collapse:collapse;width:100%;min-width:700px;font-size:.84rem;font-variant-numeric:tabular-nums}
