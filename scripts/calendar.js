@@ -183,11 +183,70 @@
     return { ...selectedEvent, capacity: capacityForType(selectedEvent.type), action: 'override', targetId: selectedEvent.id };
   };
   function modalMarkup() { if (!modal) return ''; if (modal === 'set-password') return `<section class="modal-card login"><span class="eyebrow">Zugang aktivieren</span><h2>Eigenes Passwort festlegen</h2><form data-set-password><label>Neues Passwort<input name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Wiederholung<input name="confirm" type="password" minlength="12" autocomplete="new-password" required></label><button class="primary">Passwort speichern</button></form></section>`; if (modal === 'manager' || modal === 'admin') return loginMarkup(modal); if (modal === 'dashboard') return dashboardMarkup(); if (modal === 'bfv-sources' && role === 'admin') return sourceMarkup(); if (modal === 'new-event') return `<section class="modal-card"><button class="close" data-close>×</button><span class="eyebrow">${role === 'admin' ? 'Administrator' : 'Abteilungsleitung'}</span><h2>Neuer Termin</h2>${requestForm()}</section>`; if (modal === 'event-edit') return `<section class="modal-card"><button class="close" data-close>×</button><span class="eyebrow">Administrator</span><h2>Termin direkt bearbeiten</h2>${requestForm(eventEditPreset())}</section>`; if (modal === 'event' && selectedEvent) return eventMarkup(selectedEvent); if (modal === 'request-edit') return `<section class="modal-card"><button class="close" data-close>×</button><span class="eyebrow">Administrator</span><h2>Beantragung bearbeiten</h2>${requestForm(read('sg-requests', [])[selectedRequest], selectedRequest)}</section>`; return ''; }
+  const roleName = (value) => ({ admin: 'Administrator', manager: 'Abteilungsleitung', board: 'Vorstand', disabled: 'Gesperrt' }[value] || value);
+  const lastLogin = (value) => value ? new Date(value).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'medium', timeStyle: 'short' }) : 'Noch nie angemeldet';
+  function usersMarkup() {
+    return `<section class="modal-card admin users-panel"><button class="close" data-close>×</button><span class="eyebrow">Administrator</span><h2>Zugänge verwalten</h2><p class="access-note">Einmallinks nur persönlich weitergeben. „Letzte Anmeldung“ ist kein letzter Seitenaufruf.</p><form data-user-invite><div class="form-grid"><label>E-Mail-Adresse<input name="email" type="email" required></label><label>Rolle<select name="role"><option value="manager">Abteilungsleitung</option><option value="board">Vorstand</option><option value="admin">Administrator (nur Hauptadministrator)</option></select></label></div><button class="primary">Einmallink erzeugen</button></form><div data-user-link hidden></div><h3>Bestehende Zugänge</h3><div data-users-list>Wird geladen …</div><h3>Eigenes Passwort</h3><form data-own-password><label>Neues Passwort<input name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Wiederholung<input name="confirm" type="password" minlength="12" autocomplete="new-password" required></label><button class="secondary">Eigenes Passwort ändern</button></form></section>`;
+  }
+  function showPrivateLink(target, link, email) {
+    target.hidden = false;
+    target.replaceChildren();
+    const note = document.createElement('p');
+    note.className = 'access-note';
+    note.textContent = `Einmallink für ${email}: nur privat weitergeben. Wer ihn besitzt, kann das Konto aktivieren.`;
+    const input = document.createElement('input');
+    input.type = 'text'; input.readOnly = true; input.value = link;
+    const copy = document.createElement('button');
+    copy.type = 'button'; copy.className = 'secondary'; copy.textContent = 'Link kopieren';
+    copy.onclick = async () => { try { await navigator.clipboard.writeText(link); copy.textContent = 'Kopiert'; } catch { input.select(); copy.textContent = 'Link markieren und kopieren'; } };
+    target.append(note, input, copy);
+  }
   function render() {
     app.innerHTML = `<main class="wrap"><header class="app-header"><div class="brand-lockup"><img class="club-logo" src="assets/fc-dechsendorf-logo.png" alt="Wappen des FC Dechsendorf"><div><span class="eyebrow">FC Dechsendorf</span><h1>FC Dechsendorf - Platzbelegungsplan</h1><p>Standardtrainingsplan · öffentliche Übersicht</p></div></div><div class="status"><span></span> Saison 2026/27</div></header><div class="management-actions"><button data-open="manager">Abteilungsleitung</button><button data-open="admin">Administrator</button><a class="management-link" href="statistik.html">Vorstand</a>${role ? `<button data-new-event>Neuer Termin</button>${role === 'admin' ? '<button data-admin-panel>Beantragungen</button><button data-bfv-panel>iCal-Quellen</button>' : ''}<span>Angemeldet: ${role === 'admin' ? 'Administrator' : 'Abteilungsleitung'} <button data-logout>Abmelden</button></span>` : ''}<button type="button" class="theme-toggle" data-theme-toggle aria-label="Darstellung wechseln" aria-pressed="false">🌙 Dunkel</button></div><p class="bfv-status">${esc(bfvMessage)}</p>${mowingDates.size ? '' : '<p class="mowing-status">Mähplan: Noch keine Termine eingetragen.</p>'}<nav class="view-switch"><button data-view="weeks" class="${view === 'weeks' ? 'active' : ''}">Wochenübersicht</button><button data-view="calendar" class="${view === 'calendar' ? 'active' : ''}">Kalenderansicht</button></nav>${view === 'weeks' ? weeksMarkup() : calendarMarkup()}<footer>Grün: Standardtraining. Blau: BFV-Spiele. Gelb: manuell übernommene Termine und Änderungen. Lila: Sonderereignisse und Platzsperren. Orange gestrichelt: beantragt. Rot: Klärung erforderlich.</footer></main><div class="modal-backdrop ${modal ? 'show' : ''}">${modalMarkup()}</div>`;
     app.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => { view = button.dataset.view; render(); }); app.querySelectorAll('[data-week]').forEach((button) => button.onclick = () => { openWeek = openWeek === Number(button.dataset.week) ? null : Number(button.dataset.week); render(); }); app.querySelectorAll('[data-shift]').forEach((button) => button.onclick = () => { openWeek = Math.max(0, Math.min(5, openWeek + Number(button.dataset.shift))); render(); });
     app.querySelectorAll('[data-open]').forEach((button) => button.onclick = () => { modal = button.dataset.open; render(); }); app.querySelectorAll('[data-close]').forEach((button) => button.onclick = () => { modal = null; render(); }); app.querySelector('[data-logout]')?.addEventListener('click', async () => { try { await window.Cloud.logout(); role = ''; render(); } catch (error) { alert(error.message); } });
     app.querySelectorAll('[data-event]').forEach((button) => button.onclick = () => { selectedEvent = placementsFor(new Date(`${button.dataset.date}T12:00:00`)).find((event) => event.id === button.dataset.event); if (selectedEvent) { selectedEvent.date = button.dataset.date; modal = 'event'; render(); } });
+    if (modal === 'dashboard') {
+      const oldInvite = app.querySelector('[data-invite-manager]');
+      if (oldInvite) { oldInvite.previousElementSibling?.remove(); oldInvite.remove(); }
+      app.querySelector('[data-manager-list]')?.remove();
+    }
+    if (role === 'admin') app.innerHTML = app.innerHTML.replace('<button data-bfv-panel>iCal-Quellen</button>', '<button data-bfv-panel>iCal-Quellen</button><button data-users-panel>Zugänge</button>');
+    if (modal === 'users') {
+      app.querySelector('.modal-backdrop').innerHTML = usersMarkup();
+      app.querySelector('[data-close]').onclick = () => { modal = null; render(); };
+      const list = app.querySelector('[data-users-list]');
+      const loadUsers = async () => {
+        const result = await window.Cloud.manageUsers('list');
+        app.querySelector('[data-user-invite] option[value="admin"]').hidden = !result.isOwner;
+        list.innerHTML = result.users.map((user) => `<article class="user-row"><div><b>${esc(user.email)}</b><span>${user.owner ? 'Hauptadministrator · geschützt' : roleName(user.role)} · Letzte Anmeldung: ${esc(lastLogin(user.lastSignInAt))}</span></div><div class="user-actions">${user.owner || user.role === 'disabled' || (user.role === 'admin' && !result.isOwner) ? '' : `<select data-user-role="${esc(user.id)}"><option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Abteilungsleitung</option><option value="board" ${user.role === 'board' ? 'selected' : ''}>Vorstand</option>${result.isOwner ? `<option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrator</option>` : ''}</select><button class="secondary" data-save-role="${esc(user.id)}">Rolle speichern</button><button class="secondary" data-recovery="${esc(user.id)}">Passwortlink</button><button class="secondary" data-disable="${esc(user.id)}">Zugang sperren</button>`}</div></article>`).join('') || '<p>Noch keine Zugänge.</p>';
+        list.querySelectorAll('[data-save-role]').forEach((button) => button.onclick = async () => {
+          try { await window.Cloud.manageUsers('role', { userId: button.dataset.saveRole, role: list.querySelector(`[data-user-role="${button.dataset.saveRole}"]`).value }); await loadUsers(); }
+          catch (error) { alert(error.message); }
+        });
+        list.querySelectorAll('[data-recovery]').forEach((button) => button.onclick = async () => {
+          try { const result = await window.Cloud.manageUsers('recovery', { userId: button.dataset.recovery }); showPrivateLink(app.querySelector('[data-user-link]'), result.actionLink, result.email); }
+          catch (error) { alert(error.message); }
+        });
+        list.querySelectorAll('[data-disable]').forEach((button) => button.onclick = async () => {
+          if (!confirm('Zugang sperren? Termine und Bearbeitungshistorie bleiben erhalten.')) return;
+          try { await window.Cloud.manageUsers('disable', { userId: button.dataset.disable }); await loadUsers(); }
+          catch (error) { alert(error.message); }
+        });
+      };
+      loadUsers().catch((error) => { list.textContent = `Zugänge konnten nicht geladen werden: ${error.message}`; });
+      app.querySelector('[data-user-invite]').onsubmit = async (event) => {
+        event.preventDefault(); const values = new FormData(event.currentTarget);
+        try { const result = await window.Cloud.manageUsers('invite', { email: String(values.get('email')), role: String(values.get('role')) }); showPrivateLink(app.querySelector('[data-user-link]'), result.actionLink, result.email); await loadUsers(); }
+        catch (error) { alert(`Einladung fehlgeschlagen: ${error.message}`); }
+      };
+      app.querySelector('[data-own-password]').onsubmit = async (event) => {
+        event.preventDefault(); const values = new FormData(event.currentTarget);
+        if (values.get('password') !== values.get('confirm')) { alert('Passwörter stimmen nicht überein.'); return; }
+        try { await window.Cloud.updatePassword(String(values.get('password'))); event.currentTarget.reset(); alert('Passwort geändert.'); }
+        catch (error) { alert(`Passwortänderung fehlgeschlagen: ${error.message}`); }
+      };
+    }
     app.querySelector('[data-login]')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
@@ -211,6 +270,7 @@
     });
     app.querySelector('[data-new-event]')?.addEventListener('click', () => { selectedEvent = null; modal = 'new-event'; render(); }); app.querySelector('[data-admin-panel]')?.addEventListener('click', () => { modal = 'dashboard'; render(); });
     app.querySelector('[data-bfv-panel]')?.addEventListener('click', () => { modal = 'bfv-sources'; render(); });
+    app.querySelector('[data-users-panel]')?.addEventListener('click', () => { modal = 'users'; render(); });
     const inviteForm = app.querySelector('[data-invite-manager]');
     if (inviteForm && modal === 'dashboard' && role === 'admin') {
       inviteForm.querySelector('button').textContent = 'Einmallink erzeugen';
