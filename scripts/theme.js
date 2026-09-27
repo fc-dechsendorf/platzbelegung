@@ -13,8 +13,12 @@
     const button = document.querySelector('[data-theme-toggle]');
     if (!button) return;
     const dark = current() === 'dark';
-    const label = dark ? '☀️ Hell' : '🌙 Dunkel';
-    const accessibleLabel = dark ? 'Helles Layout einschalten' : 'Dunkles Layout einschalten';
+    const locale = {
+      en: dark ? ['☀️ Light', 'Switch to light theme'] : ['🌙 Dark', 'Switch to dark theme'],
+      es: dark ? ['☀️ Claro', 'Cambiar al tema claro'] : ['🌙 Oscuro', 'Cambiar al tema oscuro']
+    }[root.lang];
+    const label = locale?.[0] || (dark ? '☀️ Hell' : '🌙 Dunkel');
+    const accessibleLabel = locale?.[1] || (dark ? 'Helles Layout einschalten' : 'Dunkles Layout einschalten');
     if (button.textContent !== label) button.textContent = label;
     if (button.getAttribute('aria-label') !== accessibleLabel) button.setAttribute('aria-label', accessibleLabel);
     if (button.getAttribute('aria-pressed') !== String(dark)) button.setAttribute('aria-pressed', String(dark));

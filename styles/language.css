@@ -1,0 +1,6 @@
+.language-picker{display:flex;align-items:center;gap:6px;margin-left:auto;color:var(--muted);font-size:.82rem;font-weight:800}
+.language-picker select{min-height:38px;border:1px solid #bcd0ea;border-radius:9px;padding:6px 27px 6px 9px;background:var(--paper);color:var(--club-blue-deep);font:inherit;cursor:pointer}
+.language-picker select:focus-visible{outline:3px solid #e8ae21;outline-offset:2px}
+.management-actions:has(.language-picker) .theme-toggle{margin-left:0}
+[data-theme="dark"] .language-picker select{background:#1c3050;border-color:#46638a;color:#eef5ff}
+@media(max-width:760px){.language-picker{margin-left:0;flex:1;justify-content:flex-end}.management-actions:has(.language-picker) .theme-toggle{grid-column:auto;min-height:38px}}
