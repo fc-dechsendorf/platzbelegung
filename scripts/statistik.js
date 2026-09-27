@@ -120,6 +120,12 @@
   }
   async function refresh() {
     errorText = '';
+    try { await window.Cloud.initializeAuth(); }
+    catch { errorText = 'Der Anmeldelink konnte nicht geprüft werden. Bitte einen neuen Einmallink anfordern.'; role = ''; rows = []; render(); return; }
+    if (window.Cloud.authError) {
+      errorText = 'Dieser Einmallink ist ungültig oder abgelaufen. Bitte beim Administrator einen neuen Link anfordern.';
+      role = ''; rows = []; render(); return;
+    }
     if (window.Cloud.needsPasswordSetup) { role = ''; rows = []; render(); return; }
     const user = await client.auth.getUser();
     role = user.error ? '' : boardRole(user.data.user);
@@ -143,5 +149,5 @@
     render();
   }
   render();
-  refresh();
+  refresh().catch(() => { errorText = 'Die Anmeldung konnte nicht geprüft werden. Bitte die Seite neu laden.'; role = ''; rows = []; render(); });
 })();
