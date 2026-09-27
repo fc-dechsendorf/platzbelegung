@@ -134,6 +134,11 @@
   function category(name) { return categories[name] ? t(categories[name]) : name; }
   function weekday(index) { return weekdays[language][index]; }
   function place(name) { return language === 'en' ? `Pitch ${name}` : language === 'es' ? `Campo ${name}` : `${name}-Platz`; }
+  function moveDescription(origin, manual) {
+    if (language === 'en') return `moved ${manual ? 'manually' : 'automatically'} from ${origin}`;
+    if (language === 'es') return `trasladado ${manual ? 'manualmente' : 'automáticamente'} desde ${origin}`;
+    return `${manual ? 'manuell' : 'automatisch'} von ${origin} verlegt`;
+  }
   document.documentElement.lang = language;
-  window.PublicLanguage = { current, set, t, category, weekday, place };
+  window.PublicLanguage = { current, set, t, category, weekday, place, moveDescription };
 })();
