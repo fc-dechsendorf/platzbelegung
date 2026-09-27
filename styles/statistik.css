@@ -1,0 +1,33 @@
+.stats-wrap{max-width:1160px}
+.stats-back{display:inline-flex;align-items:center;min-height:39px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--club-blue-deep);font-size:.82rem;font-weight:800;text-decoration:none}
+.stats-back:hover{text-decoration:underline}
+.stats-intro,.stats-seasons,.stats-login,.stats-board-admin{margin:16px 0;padding:22px;border:1px solid var(--line);border-radius:15px;background:var(--paper)}
+.stats-intro h2,.stats-seasons h2,.stats-login h2{margin:0 0 6px;font-size:1.18rem}
+.stats-intro p,.stats-seasons p,.stats-login p{margin:5px 0;color:var(--muted)}
+.stats-status{font-weight:750}
+.stats-year{margin:9px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);overflow:hidden}
+.stats-year>button{display:flex;justify-content:space-between;align-items:center;width:100%;padding:14px 17px;border:0;background:transparent;color:var(--ink);font:inherit;font-weight:800;text-align:left;cursor:pointer}
+.stats-year>button:hover{background:var(--club-blue-pale)}
+.stats-year>button:focus-visible,.stats-back:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.stats-year-body{padding:13px 16px 17px;border-top:1px solid var(--line)}
+.stats-note,.stats-empty{margin:4px 0 12px;color:var(--muted)}
+.stats-table-wrap{width:100%;overflow:auto}
+.stats-table{border-collapse:collapse;width:100%;min-width:700px;font-size:.84rem;font-variant-numeric:tabular-nums}
+.stats-table th,.stats-table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.stats-table th:first-child,.stats-table td:first-child{text-align:left}
+.stats-table thead{background:var(--club-blue-pale);color:var(--club-blue-deep)}
+.stats-table tbody tr:nth-child(even){background:#244a8809}
+.stats-table tfoot{font-weight:800;background:var(--club-blue-pale)}
+.stats-login{max-width:500px;margin:28px auto}
+.stats-login label{display:block;margin:13px 0;color:var(--club-blue-deep);font-weight:750}
+.stats-login input{display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #bcd0ea;border-radius:8px;background:var(--paper);color:var(--ink);font:inherit}
+.stats-board-admin h2{margin:0 0 6px;font-size:1.18rem}
+.stats-board-admin p{color:var(--muted)}
+.stats-board-admin label{display:block;margin:12px 0;color:var(--club-blue-deep);font-weight:750}
+.stats-board-admin input{display:block;width:min(500px,100%);margin-top:5px;padding:10px;border:1px solid #bcd0ea;border-radius:8px;background:var(--paper);color:var(--ink);font:inherit}
+.stats-board-admin [data-board-invite-output] input{width:100%}
+.stats-error{padding:10px 13px;border:1px solid #c63838;border-radius:9px;background:#fff0f0;color:#9e2626;font-weight:700}
+[data-theme="dark"] .stats-table tbody tr:nth-child(even){background:#ffffff08}
+[data-theme="dark"] .stats-login input,[data-theme="dark"] .stats-board-admin input{border-color:#526b8c}
+[data-theme="dark"] .stats-error{background:#4c252e;color:#ffe2e5}
+@media(max-width:760px){.stats-intro,.stats-seasons,.stats-login,.stats-board-admin{padding:16px}.stats-table{font-size:.78rem}.stats-table th,.stats-table td{padding:8px 7px}.stats-wrap .management-actions{grid-template-columns:1fr 1fr}.stats-back{grid-column:1/2}.stats-wrap .theme-toggle{grid-column:2/3}}

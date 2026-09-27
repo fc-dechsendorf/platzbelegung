@@ -1,4 +1,6 @@
 .theme-toggle{margin-left:auto;white-space:nowrap}
+.management-link{display:inline-flex;align-items:center;min-height:39px;padding:8px 11px;border:1px solid #bcd0ea;border-radius:9px;background:var(--paper);color:var(--club-blue-deep);font-size:.82rem;font-weight:800;text-decoration:none}
+.management-link:hover{text-decoration:underline}
 .management-actions:has(.theme-toggle) span{margin-left:0}
 .theme-toggle:focus-visible,.view-switch button:focus-visible,.week-toggle:focus-visible,.event:focus-visible,.mobile-event:focus-visible,.calendar-event-button:focus-visible{outline:3px solid #e8ae21;outline-offset:2px}
 @media(max-width:760px){.theme-toggle{grid-column:1/-1;margin-left:0;min-height:44px}}
@@ -10,6 +12,7 @@
 [data-theme="dark"] .status{background:#ffffff19}
 [data-theme="dark"] .management-actions>button,[data-theme="dark"] .management-actions span button{background:#1c3050;border-color:#46638a;color:#eef5ff}
 [data-theme="dark"] .management-actions>button:hover,[data-theme="dark"] .management-actions span button:hover{background:#29476c}
+[data-theme="dark"] .management-link{border-color:#526b8c}
 [data-theme="dark"] .bfv-status,[data-theme="dark"] .source-note{color:#adbed4}
 [data-theme="dark"] .view-switch,[data-theme="dark"] .week,[data-theme="dark"] .calendar-panel{background:var(--paper);box-shadow:0 6px 20px #0003}
 [data-theme="dark"] .view-switch button.active{background:#316dbd;color:#fff}
