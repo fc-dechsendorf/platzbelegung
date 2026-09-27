@@ -1,0 +1,11 @@
+.users-panel { width: min(880px, 100%); }
+.users-panel h3 { margin: 24px 0 8px; }
+.user-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.user-row b, .user-row span { display: block; overflow-wrap: anywhere; }
+.user-row span { margin-top: 3px; color: var(--muted); font-size: .83rem; }
+.user-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.user-actions select { width: auto; margin: 0; }
+.user-actions button { padding: 8px 9px; white-space: nowrap; }
+[data-user-link] { margin: 12px 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--club-blue-pale); }
+[data-user-link] input { width: 100%; }
+@media (max-width: 700px) { .user-row { display: block; } .user-actions { margin-top: 10px; } }
