@@ -6,6 +6,7 @@
       weeks: 'Wochenübersicht', calendar: 'Kalenderansicht', publicWeeks: 'Öffentliche Wochenansicht',
       weekIntro: 'Die sechs Wochen beginnen mit der aktuell laufenden Kalenderwoche.',
       week: 'Kalenderwoche', closeWeek: 'Übersicht schließen −', openWeek: 'Übersicht öffnen +',
+      filterTitle: 'Termine suchen und filtern', filterScope: 'Aktuelle und nächste fünf Wochen', filterSearch: 'Suche', filterPlaceholder: 'Mannschaft oder Termin', filterHomeTeam: 'Heimmannschaft / Gruppe', filterAllTeams: 'Alle Mannschaften', filterFrom: 'Von', filterTo: 'Bis', filterKinds: 'Terminarten', filterGames: 'Spiele', filterOther: 'Sonstiges / Sperren', filterApply: 'Anwenden', filterReset: 'Zurücksetzen', filterMatches: 'passende Termine', filterDimHint: 'Andere Belegungen bleiben abgeblendet sichtbar; Plätze gelten nicht als frei.', filterNone: 'Keine passenden Termine in diesen sechs Wochen.', filterFirst: 'Die ersten 30 Treffer werden angezeigt. Bitte die Suche eingrenzen.', filterDateError: 'Das Ende muss nach dem Beginn liegen.',
       pitch: 'Platz', noLights: 'ohne Flutlicht', lights: 'Flutlicht', withLights: 'mit Flutlicht',
       latest: 'Ende bis', sunset: 'Sonnenuntergang', until: 'bis', free: 'frei',
       noBookings: 'Keine Belegung', cityMows: 'Stadt mäht', mowingEmpty: 'Mähplan: Noch keine Termine eingetragen.',
@@ -42,6 +43,7 @@
       weeks: 'Weekly view', calendar: 'Calendar view', publicWeeks: 'Public weekly view',
       weekIntro: 'The six weeks start with the current calendar week.',
       week: 'Week', closeWeek: 'Close week −', openWeek: 'Open week +',
+      filterTitle: 'Search and filter bookings', filterScope: 'Current and next five weeks', filterSearch: 'Search', filterPlaceholder: 'Team or event', filterHomeTeam: 'Home team / group', filterAllTeams: 'All teams', filterFrom: 'From', filterTo: 'To', filterKinds: 'Event types', filterGames: 'Matches', filterOther: 'Other / closures', filterApply: 'Apply', filterReset: 'Reset', filterMatches: 'matching bookings', filterDimHint: 'Other bookings remain visible but faded; pitches are not free.', filterNone: 'No matching bookings in these six weeks.', filterFirst: 'Showing the first 30 results. Narrow your search.', filterDateError: 'The end date must be after the start date.',
       pitch: 'pitch', noLights: 'no floodlights', lights: 'floodlights', withLights: 'floodlights',
       latest: 'ends by', sunset: 'Sunset', until: 'until', free: 'available',
       noBookings: 'No bookings', cityMows: 'City mowing', mowingEmpty: 'Mowing schedule: No dates entered yet.',
@@ -78,6 +80,7 @@
       weeks: 'Vista semanal', calendar: 'Calendario', publicWeeks: 'Vista semanal pública',
       weekIntro: 'Las seis semanas comienzan con la semana actual.',
       week: 'Semana', closeWeek: 'Cerrar semana −', openWeek: 'Abrir semana +',
+      filterTitle: 'Buscar y filtrar reservas', filterScope: 'Semana actual y cinco siguientes', filterSearch: 'Buscar', filterPlaceholder: 'Equipo o evento', filterHomeTeam: 'Equipo local / grupo', filterAllTeams: 'Todos los equipos', filterFrom: 'Desde', filterTo: 'Hasta', filterKinds: 'Tipos de evento', filterGames: 'Partidos', filterOther: 'Otros / cierres', filterApply: 'Aplicar', filterReset: 'Restablecer', filterMatches: 'reservas coincidentes', filterDimHint: 'Las demás reservas siguen visibles atenuadas; los campos no están libres.', filterNone: 'No hay reservas coincidentes en estas seis semanas.', filterFirst: 'Se muestran los primeros 30 resultados. Ajusta la búsqueda.', filterDateError: 'La fecha final debe ser posterior a la inicial.',
       pitch: 'campo', noLights: 'sin iluminación', lights: 'con iluminación', withLights: 'con iluminación',
       latest: 'fin antes de', sunset: 'Puesta de sol', until: 'hasta', free: 'disponible',
       noBookings: 'Sin reservas', cityMows: 'Corte de césped municipal', mowingEmpty: 'Calendario de corte: aún no hay fechas.',
@@ -142,3 +145,4 @@
   document.documentElement.lang = language;
   window.PublicLanguage = { current, set, t, category, weekday, place, moveDescription };
 })();
+

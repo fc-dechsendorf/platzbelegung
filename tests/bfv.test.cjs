@@ -18,6 +18,7 @@ function appContext() {
   vm.createContext(context);
   const run = (file) => vm.runInContext(fs.readFileSync(path.join(scripts, file), 'utf8'), context);
   run('bfv.js');
+  run('schedule-filter.js');
   return { context, run, values };
 }
 
@@ -292,3 +293,4 @@ test('Sonderereignisse sind in allen Ansichten lila und manuelle Termine bleiben
   assert.match(css, /\.event\.special[^\n]*background:#f1eafe/);
   assert.match(css, /\.event\.manual[^\n]*background:#fff7d7/);
 });
+
