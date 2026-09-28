@@ -95,14 +95,14 @@ test('English BFV match details translate the BFV pitch explanation', async () =
   assert.match(state.app.innerHTML, /Atletico Erlangen-Testgegner/);
 });
 
-test('Spanish BFV conflict warning is translated while the manual appointment remains', async () => {
+test('Spanish BFV reconciliation note is translated while the manual appointment remains', async () => {
   const game = { id: 'bfv-conflict-language', uid: 'conflict-language', date: '2026-09-25', from: '18:00', to: '19:30',
     name: 'Atletico Erlangen-Testgegner', source: 'Atletico', category: 'Liga', status: 'Heimspiel' };
   const state = await setup('es', { game, eventId: game.id, eventDate: game.date,
     overrides: { [game.id]: { date: game.date, team: game.name, from: '18:15', to: '19:30', place: 'B', type: 'voll' } } });
   state.openEvent();
-  assert.match(state.app.innerHTML, /Revisar con BFV: la fecha o la hora/);
-  assert.match(state.app.innerHTML, /El evento manual se conserva/);
+  assert.match(state.app.innerHTML, /Cambio confirmado por el club · pendiente de actualización en BFV/);
+  assert.match(state.app.innerHTML, /La ID no cambia/);
   assert.match(state.app.innerHTML, /B · trasladado manualmente desde A/);
   assert.match(state.app.innerHTML, /18:15–19:30/);
   assert.doesNotMatch(state.app.innerHTML, /BFV-Abgleich nötig: Datum oder Uhrzeit/);
