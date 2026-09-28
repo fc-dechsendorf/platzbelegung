@@ -1,10 +1,10 @@
 (function (root) {
   const normalized = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('de-DE');
   // BFV source is the first feed containing a game, not necessarily its home side.
-  const homeTeam = (event) => event.displayHomeTeam || (event.type === 'game'
+  const homeTeam = (event) => event.displayHomeTeam || (event.type === 'game' || event.id?.startsWith('bfv-')
     ? String(event.team || '').split(/\s+-\s+|(?<=\S)-(?=\S)/, 1)[0].trim()
     : String(event.team || '').trim());
-  const group = (event) => event.type === 'game' || ['league', 'cup', 'friendly'].includes(event.kind) ? 'game'
+  const group = (event) => event.type === 'game' || event.id?.startsWith('bfv-') || ['league', 'cup', 'friendly'].includes(event.kind) ? 'game'
     : event.category === 'Training' || event.kind === 'training' ? 'training' : 'other';
   const active = (filter) => Boolean(filter.query || filter.team || filter.from || filter.to ||
     !filter.training || !filter.game || !filter.other);
