@@ -100,7 +100,7 @@
     const officialById = new Map(bfvGames.map((game) => [game.id, game]));
     const manualState = (id, override) => ({
       manual: true,
-      idConflict: officialById.has(id) && (
+      bfvPending: officialById.has(id) && (
         override.date !== officialById.get(id).date ||
         override.from !== officialById.get(id).from ||
         override.to !== officialById.get(id).to),
@@ -108,7 +108,10 @@
       bfvOfficial: officialById.get(id) || null
     });
     const current = base.filter((event) => !overrides[event.id] || !overrides[event.id].date || overrides[event.id].date === iso(date)).map((event) => overrides[event.id] ? { ...event, ...overrides[event.id], originalPlace: event.originalPlace, source: `${event.source} · administrativ geändert`, ...manualState(event.id, overrides[event.id]) } : event);
-    const movedHere = Object.entries(overrides).filter(([id, override]) => override.date === iso(date) && !base.some((event) => event.id === id)).map(([id, override]) => ({ id, ...override, originalPlace: override.originalPlace || 'nicht festgelegt', category: 'Administrativ geänderter Termin', source: 'Administrator', ...manualState(id, override) }));
+    const movedHere = Object.entries(overrides).filter(([id, override]) => override.date === iso(date) && !base.some((event) => event.id === id)).map(([id, override]) => {
+      const official = officialById.get(id);
+      return { id, uid: official?.uid, ...override, originalPlace: official ? 'A' : override.originalPlace || 'nicht festgelegt', type: official ? 'game' : override.type, category: official?.category || 'Administrativ geänderter Termin', source: official ? `BFV-iCal · ${official.source} · administrativ geändert` : 'Administrator', location: official?.location, ...manualState(id, override) };
+    });
     const sources = bfv?.sources?.() || [];
     return [...current, ...movedHere].filter((event) => !deleted.has(event.id)).map((event) => {
       const official = officialById.get(event.id);
@@ -183,8 +186,8 @@
   };
   function requestForm(item = {}, index = '') {
     const place = item.place || 'A', cap = item.capacity || '1/1', fixedGame = Boolean(item.targetId?.startsWith('bfv-'));
-    const dateField = fixedGame ? `${esc(item.date)}<input type="hidden" name="date" value="${esc(item.date)}">` : `<input name="date" type="date" value="${item.date || ''}" required>`;
-    const timeField = (name, value) => fixedGame ? `${esc(value)}<input type="hidden" name="${name}" value="${esc(value)}">` : `<select name="${name}" required>${timeOptions(value)}</select>`;
+    const dateField = `<input name="date" type="date" value="${item.date || ''}" required>`;
+    const timeField = (name, value) => `<select name="${name}" required>${timeOptions(value)}</select>`;
     const teamField = fixedGame ? `${esc(item.team)}<input type="hidden" name="team" value="${esc(item.team)}">` : `<input name="team" value="${esc(item.team)}" required>`;
     const capacityField = fixedGame ? `1/1 Platz<input type="hidden" name="capacity" value="1/1">` : `<select name="capacity" data-capacity><option value="1/2" ${cap === '1/2' ? 'selected' : ''}>1/2 Platz</option><option value="1/1" ${cap === '1/1' ? 'selected' : ''}>1/1 Platz</option><option value="vorplatz" ${cap === 'vorplatz' ? 'selected' : ''} ${place !== 'A' ? 'disabled' : ''}>Vorplatz (nur A-Platz)</option></select>`;
     const kind = item.kind || '';
@@ -196,7 +199,7 @@
       ? `<label>Zugehörigkeit für die Statistik<select name="organization" required><option value="" disabled ${!organization ? 'selected' : ''}>Bitte wählen</option><option value="fcd" ${organization === 'fcd' ? 'selected' : ''}>FC Dechsendorf</option><option value="atletico" ${organization === 'atletico' ? 'selected' : ''}>Atletico Erlangen</option><option value="other" ${organization === 'other' ? 'selected' : ''}>Sonstige / extern</option></select></label>`
       : `<input type="hidden" name="organization" value="${esc(organization || 'other')}">`;
     const formIndex = index === '' ? (item._index ?? '') : index;
-    return `<form data-request-form><input type="hidden" name="index" value="${formIndex}"><input type="hidden" name="id" value="${esc(item.id || '')}"><input type="hidden" name="action" value="${esc(item.action || 'new')}"><input type="hidden" name="targetId" value="${esc(item.targetId || '')}"><label>Bezeichnung${teamField}</label><div class="form-grid"><label>Datum${dateField}</label><label>Platz<select name="place" data-place>${places.map((option) => `<option ${place === option ? 'selected' : ''}>${option}</option>`).join('')}</select></label><label>Beginn${timeField('from', item.from)}</label><label>Ende${timeField('to', item.to)}</label><label>Platzbedarf${capacityField}</label></div>${kindField}${organizationField}${fixedGame ? '<p class="access-note">BFV-Spiel: Datum und Uhrzeit sind fest; nur der Platz kann verlegt werden.</p>' : ''}<label>Hinweis<textarea name="note" rows="3">${esc(item.note)}</textarea></label><button class="primary">${role === 'admin' ? 'Übernehmen' : 'Beantragen'}</button></form>`;
+    return `<form data-request-form><input type="hidden" name="index" value="${formIndex}"><input type="hidden" name="id" value="${esc(item.id || '')}"><input type="hidden" name="action" value="${esc(item.action || 'new')}"><input type="hidden" name="targetId" value="${esc(item.targetId || '')}"><label>Bezeichnung${teamField}</label><div class="form-grid"><label>Datum${dateField}</label><label>Platz<select name="place" data-place>${places.map((option) => `<option ${place === option ? 'selected' : ''}>${option}</option>`).join('')}</select></label><label>Beginn${timeField('from', item.from)}</label><label>Ende${timeField('to', item.to)}</label><label>Platzbedarf${capacityField}</label></div>${kindField}${organizationField}${fixedGame ? `<p class="access-note">BFV-Spiel-ID: ${esc(item.uid || item.targetId.slice(4))}. Datum, Uhrzeit und Platz können verlegt werden; die ID und 1/1 Platz bleiben unverändert. Bis zum BFV-Abgleich gilt die bestätigte Vereinsverlegung.</p>` : ''}<label>Hinweis<textarea name="note" rows="3">${esc(item.note)}</textarea></label><button class="primary">${role === 'admin' ? 'Übernehmen' : 'Beantragen'}</button></form>`;
   }
   const movePreset = () => selectedEvent ? ({ ...selectedEvent, capacity: capacityForType(selectedEvent.type), action: 'move', targetId: selectedEvent.id, note: `Verlegung beantragt. ${selectedEvent.note || ''}` }) : {};
   const organizationOptions = (selected = '') => [['fcd', 'FC Dechsendorf'], ['atletico', 'Atletico Erlangen'], ['other', 'Sonstige / extern']]
@@ -255,8 +258,8 @@
   function eventMarkup(event) {
     const editable = role === 'admin' && event.type !== 'archery', requestable = role === 'manager' && event.type !== 'archery';
     const sun = sunsetFor(new Date(`${event.date}T12:00:00`));
-    const bfvCheck = event.idConflict
-      ? `<p class="bfv-conflict">${t('bfvMismatch', 'BFV-Abgleich nötig: Datum oder Uhrzeit der manuellen Fassung weichen bei gleicher BFV-ID vom aktuellen BFV-Spiel ab. Der manuelle Termin bleibt erhalten. BFV meldet:')} ${esc(event.bfvOfficial.date)} · ${esc(event.bfvOfficial.from)}–${esc(event.bfvOfficial.to)}. ${t('bfvNoPlace', 'Eine BFV-Platznummer wird nicht übernommen.')}</p>`
+    const bfvCheck = event.bfvPending
+      ? `<p class="bfv-pending">${t('bfvAwaiting', 'Vereinsverlegung bestätigt · BFV-Abgleich ausstehend. Die BFV-ID bleibt gleich; der manuelle Termin gilt bis zur Prüfung. BFV meldet noch:')} ${esc(event.bfvOfficial.date)} · ${esc(event.bfvOfficial.from)}–${esc(event.bfvOfficial.to)}. ${t('bfvNoPlace', 'Eine BFV-Platznummer wird nicht übernommen.')}</p>`
       : event.bfvMissing
         ? `<p class="bfv-conflict">${t('bfvGone', 'BFV-Abgleich nötig: Die ID dieses manuell geänderten Spiels fehlt im aktuellen BFV-Abruf. Der manuelle Termin bleibt erhalten.')}</p>`
         : '';
@@ -474,10 +477,12 @@
       if (data.place !== 'A' && data.capacity === 'vorplatz') { alert('Vorplatz ist nur am A-Platz möglich.'); return; }
       if (mins(data.from) >= mins(data.to)) { alert('Das Ende muss nach dem Beginn liegen.'); return; }
       const official = bfvGames.find((game) => game.id === data.targetId);
-      if (official && (data.date !== official.date || data.from !== official.from || data.to !== official.to || data.capacity !== '1/1')) {
-        alert('Bei BFV-Spielen darf nur der Platz geändert werden.'); return;
-      }
+      if (official && data.capacity !== '1/1') { alert('BFV-Spiele benötigen weiterhin 1/1 Platz.'); return; }
+      if (official) data.team = official.name;
       const requests = read('sg-requests', []), index = data.index;
+      if (official && data.action === 'move' && index === '' && requests.some((item) => item.targetId === data.targetId && item.action === 'move' && item.status === 'beantragt')) {
+        alert('Für diese BFV-ID liegt bereits ein Verlegungsantrag vor. Bitte zuerst diesen Antrag bearbeiten oder entscheiden.'); return;
+      }
       delete data.index;
       try {
         if (data.action === 'override' && data.targetId) {
