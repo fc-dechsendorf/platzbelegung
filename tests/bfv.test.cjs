@@ -179,6 +179,43 @@ test('BFV-Spiel zeigt Ü32 und erlaubt eine Verlegung unter derselben BFV-ID', a
   assert.match(app.innerHTML, /name="date" type="date" value="2026-09-25"/);
   assert.match(app.innerHTML, /<select name="to" required>/);
   assert.match(app.innerHTML, /<option value="20:40" selected>20:40 \(bisher\)<\/option>/);
+  assert.match(app.innerHTML, /name="capacity" value="1\/1"/);
+});
+
+test('zwei bestätigte Jugendspiele können je 1/2 Platz gleichzeitig nutzen', async () => {
+  const { context, run } = appContext();
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const date = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+  const gameButton = { dataset: { event: 'bfv-youth-one', date } };
+  const handlers = new Map();
+  const app = { innerHTML: '',
+    querySelectorAll: (selector) => selector === '[data-event]' ? [gameButton] : [],
+    querySelector: (selector) => ['[data-manager-list]', '[data-mowing-list]'].includes(selector) ? null :
+      ({ addEventListener: (_, handler) => handlers.set(selector, handler) }) };
+  context.document = { getElementById: () => app };
+  run('data.js');
+  const games = [
+    { id: 'bfv-youth-one', uid: 'youth-one', source: 'D-Jugend', sourceIds: ['excel-12'], name: 'FC Dechsendorf-Gast 1' },
+    { id: 'bfv-youth-two', uid: 'youth-two', source: 'E-Jugend', sourceIds: ['excel-13'], name: 'FC Dechsendorf-Gast 2' }
+  ].map((game) => ({ ...game, date, from: '12:00', to: '13:30', category: 'Liga', status: 'Heimspiel' }));
+  context.AppData.bfvGames.push(...games);
+  const overrides = Object.fromEntries(games.map((game) => [game.id,
+    { team: game.name, date, from: game.from, to: game.to, place: 'B', type: 'halb' }]));
+  context.Cloud = { initialize: async () => ({ importedAt: null, games: [] }), role: () => 'admin',
+    sources: [{ id: 'excel-12', team: 'D-Jugend', organization: 'fcd' }, { id: 'excel-13', team: 'E-Jugend', organization: 'fcd' }],
+    read: (key, fallback) => key === 'sg-overrides' ? overrides : fallback };
+  run('calendar.js');
+  await new Promise(setImmediate);
+  assert.match(app.innerHTML, /class="event halb manual" data-event="bfv-youth-one"/);
+  assert.match(app.innerHTML, /class="event halb right manual" data-event="bfv-youth-two"/);
+  assert.doesNotMatch(app.innerHTML, /class="event halb[^\"]*unresolved" data-event="bfv-youth-/);
+  gameButton.onclick();
+  assert.match(app.innerHTML, /Platzbedarf<\/dt><dd>1\/2 Platz/);
+  handlers.get('[data-edit-event]')();
+  assert.match(app.innerHTML, /Für C- bis G-Jugend sind 1\/2 oder 1\/1 Platz möglich/);
+  assert.match(app.innerHTML, /<option value="1\/2" selected>1\/2 Platz<\/option>/);
+  assert.doesNotMatch(app.innerHTML, /value="vorplatz"/);
 });
 
 test('eine bestätigte BFV-Verlegung ersetzt den alten Kalendereintrag ohne zweite Spiel-ID', async () => {
