@@ -152,7 +152,7 @@ test('Administrator sieht nur offene Beantragungen, mit originalen Listenindizes
   assert.match(dashboard, /data-approve="1"/);
 });
 
-test('BFV-Spiel zeigt Ü32 und schützt die offizielle Spielzeit beim Bearbeiten', async () => {
+test('BFV-Spiel zeigt Ü32 und erlaubt eine Verlegung unter derselben BFV-ID', async () => {
   const { context, run } = appContext();
   const handlers = new Map();
   const gameButton = { dataset: { event: 'bfv-test-game', date: '2026-09-25' } };
@@ -175,9 +175,35 @@ test('BFV-Spiel zeigt Ü32 und schützt die offizielle Spielzeit beim Bearbeiten
   assert.match(app.innerHTML, /BFV-ID<\/dt><dd>test-game/);
   assert.match(app.innerHTML, /BFV-Platzangabe<\/dt><dd>Für unsere Platzverteilung nicht maßgeblich/);
   handlers.get('[data-edit-event]')();
-  assert.match(app.innerHTML, /BFV-Spiel: Datum und Uhrzeit sind fest/);
-  assert.match(app.innerHTML, /name="to" value="20:40"/);
-  assert.doesNotMatch(app.innerHTML, /<select name="to"/);
+  assert.match(app.innerHTML, /BFV-Spiel-ID: test-game/);
+  assert.match(app.innerHTML, /name="date" type="date" value="2026-09-25"/);
+  assert.match(app.innerHTML, /<select name="to" required>/);
+  assert.match(app.innerHTML, /<option value="20:40" selected>20:40 \(bisher\)<\/option>/);
+});
+
+test('eine bestätigte BFV-Verlegung ersetzt den alten Kalendereintrag ohne zweite Spiel-ID', async () => {
+  const { context, run } = appContext();
+  const original = { id: 'bfv-same-id', uid: 'same-id', date: '2026-09-28', from: '19:00', to: '20:30',
+    name: 'FC Dechsendorf - Gast', source: 'Herren', category: 'Liga', status: 'Heimspiel',
+    place: 'A', location: 'Sportanlage Erlangen Campingstrasse 38, 91056 Erlangen' };
+  const override = { team: original.name, date: '2026-09-29', from: '19:30', to: '21:00',
+    place: 'B', type: 'game', note: 'Vereinsverlegung bestätigt' };
+  const gameButton = { dataset: { event: original.id, date: override.date } };
+  const app = { innerHTML: '', querySelectorAll: (selector) => selector === '[data-event]' ? [gameButton] : [],
+    querySelector: () => null };
+  context.document = { getElementById: () => app };
+  run('data.js');
+  context.AppData.bfvGames.push(original);
+  context.Cloud = { initialize: async () => ({ importedAt: null, games: [] }), role: () => '',
+    read: (key, fallback) => key === 'sg-overrides' ? { [original.id]: override } : fallback };
+  run('calendar.js');
+  await new Promise(setImmediate);
+  gameButton.onclick();
+  assert.match(app.innerHTML, /BFV-ID<\/dt><dd>same-id/);
+  assert.match(app.innerHTML, /Vereinsverlegung bestätigt · BFV-Abgleich ausstehend/);
+  assert.match(app.innerHTML, /<dd>2026-09-29<\/dd>/);
+  assert.match(app.innerHTML, /<dd>19:30–21:00<\/dd>/);
+  assert.doesNotMatch(app.innerHTML, /class="bfv-conflict"/);
 });
 
 test('bereits gespeicherte BFV-Platznummer B wird bei der Vereinsplanung ignoriert', async () => {
@@ -279,7 +305,7 @@ test('manuell übernommene Termine und Änderungen sind markiert, offene Anträg
   assert.match(app.innerHTML, /manuelle Platzwahl prüfen \(keine freie Kapazität\)/);
 });
 
-test('reine manuelle BFV-Platzwahl ist gelb, BFV-Zeitabweichung ist rot', async () => {
+test('bestätigte BFV-Verlegung bleibt bei noch altem BFV-Termin gelb', async () => {
   const { context, run } = appContext();
   const now = new Date();
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
@@ -303,8 +329,8 @@ test('reine manuelle BFV-Platzwahl ist gelb, BFV-Zeitabweichung ist rot', async 
   assert.doesNotMatch(app.innerHTML, /BFV-Abgleich nötig/);
   overrides['bfv-color'].from = '12:15';
   gameButton.onclick();
-  assert.match(app.innerHTML, /class="event voll manual unresolved"[^>]*><b>Ligaspiel<\/b>/);
-  assert.match(app.innerHTML, /BFV-Abgleich nötig: Datum oder Uhrzeit/);
+  assert.match(app.innerHTML, /class="event voll manual"[^>]*><b>Ligaspiel<\/b>/);
+  assert.match(app.innerHTML, /Vereinsverlegung bestätigt · BFV-Abgleich ausstehend/);
 });
 
 test('Sonderereignisse sind in allen Ansichten lila und manuelle Termine bleiben gelb', () => {
