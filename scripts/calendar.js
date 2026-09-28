@@ -64,12 +64,14 @@
     return { minutes: total, label: `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}` };
   }
   const overlaps = (a, b) => mins(a.from) < mins(b.to) && mins(b.from) < mins(a.to);
+  const isBfvGame = (event) => Boolean(event?.id?.startsWith('bfv-'));
+  const youthHalfGame = (game) => Boolean(game && gameTitle?.halfPitchEligible(game, bfv?.sources?.() || []));
   function fits(event, place, assigned) {
     const simultaneous = assigned.filter((other) =>
       other.place === place && (other.allDay || overlaps(event, other)));
     const blocks = simultaneous.filter((other) => other.type === 'special');
     if (blocks.some((block) => block.scope === 'Ganz gesperrt')) return false;
-    if (event.type === 'game' && blocks.length) return false;
+    if ((event.type === 'game' || isBfvGame(event)) && blocks.length) return false;
     if (event.type === 'vorplatz') return true;
     const limit = blocks.some((block) => block.scope === 'Halbseitig gesperrt') ? .5 : 1;
     const occupied = simultaneous.filter((other) => other.type !== 'special')
@@ -110,7 +112,7 @@
     const current = base.filter((event) => !overrides[event.id] || !overrides[event.id].date || overrides[event.id].date === iso(date)).map((event) => overrides[event.id] ? { ...event, ...overrides[event.id], originalPlace: event.originalPlace, source: `${event.source} · administrativ geändert`, ...manualState(event.id, overrides[event.id]) } : event);
     const movedHere = Object.entries(overrides).filter(([id, override]) => override.date === iso(date) && !base.some((event) => event.id === id)).map(([id, override]) => {
       const official = officialById.get(id);
-      return { id, uid: official?.uid, ...override, originalPlace: official ? 'A' : override.originalPlace || 'nicht festgelegt', type: official ? 'game' : override.type, category: official?.category || 'Administrativ geänderter Termin', source: official ? `BFV-iCal · ${official.source} · administrativ geändert` : 'Administrator', location: official?.location, ...manualState(id, override) };
+      return { id, uid: official?.uid, ...override, originalPlace: official ? 'A' : override.originalPlace || 'nicht festgelegt', type: official ? (override.type === 'halb' ? 'halb' : 'game') : override.type, category: official?.category || 'Administrativ geänderter Termin', source: official ? `BFV-iCal · ${official.source} · administrativ geändert` : 'Administrator', location: official?.location, ...manualState(id, override) };
     });
     const sources = bfv?.sources?.() || [];
     return [...current, ...movedHere].filter((event) => !deleted.has(event.id)).map((event) => {
@@ -127,7 +129,7 @@
     rawEvents(date).sort((a, b) => rank(b) - rank(a) || mins(a.from) - mins(b.from)).forEach((event) => {
       if (event.type === 'archery') {
         if (assigned.some((other) => other.place === 'C' && other.type === 'special' && other.scope === 'Ganz gesperrt')) return;
-        event.archeryGame = assigned.some((other) => other.place === 'C' && other.type === 'game' && overlaps(event, other));
+        event.archeryGame = assigned.some((other) => other.place === 'C' && (other.type === 'game' || isBfvGame(other)) && overlaps(event, other));
         if (event.archeryGame) event.note = 'Spiel hat Vorrang. Bogenschützentraining nur nach Abstimmung möglich.';
         assigned.push(event);
         return;
@@ -153,7 +155,7 @@
       assigned.push(event);
     });
     const archery = assigned.filter((event) => event.type === 'archery');
-    assigned.filter((event) => event.place === 'C' && ['voll', 'game'].includes(event.type))
+    assigned.filter((event) => event.place === 'C' && (['voll', 'game'].includes(event.type) || isBfvGame(event)))
       .forEach((event) => { event.archeryParallel = archery.some((other) => overlaps(event, other)); });
     return assigned;
   }
@@ -186,10 +188,11 @@
   };
   function requestForm(item = {}, index = '') {
     const place = item.place || 'A', cap = item.capacity || '1/1', fixedGame = Boolean(item.targetId?.startsWith('bfv-'));
+    const halfEligible = fixedGame && youthHalfGame(bfvGames.find((game) => game.id === item.targetId));
     const dateField = `<input name="date" type="date" value="${item.date || ''}" required>`;
     const timeField = (name, value) => `<select name="${name}" required>${timeOptions(value)}</select>`;
     const teamField = fixedGame ? `${esc(item.team)}<input type="hidden" name="team" value="${esc(item.team)}">` : `<input name="team" value="${esc(item.team)}" required>`;
-    const capacityField = fixedGame ? `1/1 Platz<input type="hidden" name="capacity" value="1/1">` : `<select name="capacity" data-capacity><option value="1/2" ${cap === '1/2' ? 'selected' : ''}>1/2 Platz</option><option value="1/1" ${cap === '1/1' ? 'selected' : ''}>1/1 Platz</option><option value="vorplatz" ${cap === 'vorplatz' ? 'selected' : ''} ${place !== 'A' ? 'disabled' : ''}>Vorplatz (nur A-Platz)</option></select>`;
+    const capacityField = fixedGame && !halfEligible ? `1/1 Platz<input type="hidden" name="capacity" value="1/1">` : `<select name="capacity" data-capacity><option value="1/2" ${cap === '1/2' ? 'selected' : ''}>1/2 Platz</option><option value="1/1" ${cap === '1/1' ? 'selected' : ''}>1/1 Platz</option>${fixedGame ? '' : `<option value="vorplatz" ${cap === 'vorplatz' ? 'selected' : ''} ${place !== 'A' ? 'disabled' : ''}>Vorplatz (nur A-Platz)</option>`}</select>`;
     const kind = item.kind || '';
     const kindField = (item.action || 'new') === 'new'
       ? `<label>Terminart für die Statistik<select name="kind" required><option value="" disabled ${!kind ? 'selected' : ''}>Bitte wählen</option><option value="training" ${kind === 'training' ? 'selected' : ''}>Training</option><option value="league" ${kind === 'league' ? 'selected' : ''}>Ligaspiel</option><option value="cup" ${kind === 'cup' ? 'selected' : ''}>Pokalspiel</option><option value="friendly" ${kind === 'friendly' ? 'selected' : ''}>Freundschaftsspiel</option><option value="other" ${kind === 'other' ? 'selected' : ''}>Sonstiges</option></select></label>`
@@ -199,7 +202,7 @@
       ? `<label>Zugehörigkeit für die Statistik<select name="organization" required><option value="" disabled ${!organization ? 'selected' : ''}>Bitte wählen</option><option value="fcd" ${organization === 'fcd' ? 'selected' : ''}>FC Dechsendorf</option><option value="atletico" ${organization === 'atletico' ? 'selected' : ''}>Atletico Erlangen</option><option value="other" ${organization === 'other' ? 'selected' : ''}>Sonstige / extern</option></select></label>`
       : `<input type="hidden" name="organization" value="${esc(organization || 'other')}">`;
     const formIndex = index === '' ? (item._index ?? '') : index;
-    return `<form data-request-form><input type="hidden" name="index" value="${formIndex}"><input type="hidden" name="id" value="${esc(item.id || '')}"><input type="hidden" name="action" value="${esc(item.action || 'new')}"><input type="hidden" name="targetId" value="${esc(item.targetId || '')}"><label>Bezeichnung${teamField}</label><div class="form-grid"><label>Datum${dateField}</label><label>Platz<select name="place" data-place>${places.map((option) => `<option ${place === option ? 'selected' : ''}>${option}</option>`).join('')}</select></label><label>Beginn${timeField('from', item.from)}</label><label>Ende${timeField('to', item.to)}</label><label>Platzbedarf${capacityField}</label></div>${kindField}${organizationField}${fixedGame ? `<p class="access-note">BFV-Spiel-ID: ${esc(item.uid || item.targetId.slice(4))}. Datum, Uhrzeit und Platz können verlegt werden; die ID und 1/1 Platz bleiben unverändert. Bis zum BFV-Abgleich gilt die bestätigte Vereinsverlegung.</p>` : ''}<label>Hinweis<textarea name="note" rows="3">${esc(item.note)}</textarea></label><button class="primary">${role === 'admin' ? 'Übernehmen' : 'Beantragen'}</button></form>`;
+    return `<form data-request-form><input type="hidden" name="index" value="${formIndex}"><input type="hidden" name="id" value="${esc(item.id || '')}"><input type="hidden" name="action" value="${esc(item.action || 'new')}"><input type="hidden" name="targetId" value="${esc(item.targetId || '')}"><label>Bezeichnung${teamField}</label><div class="form-grid"><label>Datum${dateField}</label><label>Platz<select name="place" data-place>${places.map((option) => `<option ${place === option ? 'selected' : ''}>${option}</option>`).join('')}</select></label><label>Beginn${timeField('from', item.from)}</label><label>Ende${timeField('to', item.to)}</label><label>Platzbedarf${capacityField}</label></div>${kindField}${organizationField}${fixedGame ? `<p class="access-note">BFV-Spiel-ID: ${esc(item.uid || item.targetId.slice(4))}. Datum, Uhrzeit und Platz können verlegt werden; die ID bleibt unverändert. ${halfEligible ? 'Für C- bis G-Jugend sind 1/2 oder 1/1 Platz möglich.' : 'Der Platzbedarf bleibt 1/1.'} Bis zum BFV-Abgleich gilt die bestätigte Vereinsverlegung.</p>` : ''}<label>Hinweis<textarea name="note" rows="3">${esc(item.note)}</textarea></label><button class="primary">${role === 'admin' ? 'Übernehmen' : 'Beantragen'}</button></form>`;
   }
   const movePreset = () => selectedEvent ? ({ ...selectedEvent, capacity: capacityForType(selectedEvent.type), action: 'move', targetId: selectedEvent.id, note: `Verlegung beantragt. ${selectedEvent.note || ''}` }) : {};
   const organizationOptions = (selected = '') => [['fcd', 'FC Dechsendorf'], ['atletico', 'Atletico Erlangen'], ['other', 'Sonstige / extern']]
@@ -477,7 +480,9 @@
       if (data.place !== 'A' && data.capacity === 'vorplatz') { alert('Vorplatz ist nur am A-Platz möglich.'); return; }
       if (mins(data.from) >= mins(data.to)) { alert('Das Ende muss nach dem Beginn liegen.'); return; }
       const official = bfvGames.find((game) => game.id === data.targetId);
-      if (official && data.capacity !== '1/1') { alert('BFV-Spiele benötigen weiterhin 1/1 Platz.'); return; }
+      if (official && data.capacity !== '1/1' && !(data.capacity === '1/2' && youthHalfGame(official))) {
+        alert('Nur BFV-Spiele der C- bis G-Jugend dürfen mit 1/2 Platz angesetzt werden.'); return;
+      }
       if (official) data.team = official.name;
       const requests = read('sg-requests', []), index = data.index;
       if (official && data.action === 'move' && index === '' && requests.some((item) => item.targetId === data.targetId && item.action === 'move' && item.status === 'beantragt')) {
