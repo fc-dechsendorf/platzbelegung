@@ -23,6 +23,8 @@
     if (/^Herren(?:\s+\d+)?$/i.test(sourceName) && club(home) === 'fcd') return sourceName;
     if (/^Damen(?:\s+\d+)?$/i.test(sourceName) && club(home) === 'fcd') return sourceName;
     if (/^Atletico Ü32$/i.test(sourceName) && club(home) === 'atletico') return 'Ü32';
+    if (/^Atletico(?: II)? Herren$/i.test(sourceName) && club(home) === 'atletico') return 'Herren';
+    if (/^Atl[eé]tico Frauen Freizeitsport$/i.test(sourceName) && club(home) === 'atletico') return 'Frauen (Freizeitsport)';
     return '';
   }
   function format(game, sources = []) {

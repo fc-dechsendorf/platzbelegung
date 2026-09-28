@@ -10,7 +10,9 @@ const sources = [
   { id: 'excel-12', team: 'D-Jugend', organization: 'fcd' },
   { id: 'excel-13', team: 'E-Jugend', organization: 'fcd' },
   { id: 'excel-24', team: 'Atletico Ü32', organization: 'atletico' },
-  { id: 'excel-26', team: 'Atletico', organization: 'atletico' }
+  { id: 'excel-25', team: 'Atletico Herren', organization: 'atletico' },
+  { id: 'excel-26', team: 'Atletico II Herren', organization: 'atletico' },
+  { id: 'excel-29', team: 'Atlético Frauen Freizeitsport', organization: 'atletico' }
 ];
 const game = (name, sourceIds, status = 'Heimspiel') => ({ name, sourceIds, status });
 
@@ -27,11 +29,15 @@ test('FCD-Jugend erscheint mit Altersklasse vor dem Gegner', () => {
 
 test('Doppelter BFV-Feed benennt nur die tatsächliche Heimmannschaft', () => {
   assert.equal(format(game('Atletico Erlangen II-FC Dechsendorf', ['excel-5', 'excel-26']), sources).title,
-    'Atletico Erlangen II-FC Dechsendorf');
+    'Atletico Erlangen II Herren – FC Dechsendorf');
   assert.equal(format(game('FC Dechsendorf-Atletico Erlangen II', ['excel-5', 'excel-26']), sources).title,
     'FC Dechsendorf Herren – Atletico Erlangen II');
   assert.equal(format(game('Atletico Erlangen-SV Tennenlohe', ['excel-24']), sources).title,
     'Atletico Erlangen Ü32 – SV Tennenlohe');
+  assert.equal(format(game('Atletico Erlangen-ASV Herzogenaurach', ['excel-25']), sources).title,
+    'Atletico Erlangen Herren – ASV Herzogenaurach');
+  assert.equal(format(game('Atlético Erlangen-FC Wendelstein', ['excel-29']), sources).title,
+    'Atlético Erlangen Frauen (Freizeitsport) – FC Wendelstein');
 });
 
 test('Ungeklärter Ort und fehlende Teamquelle führen zu keiner erfundenen Jugendzuordnung', () => {

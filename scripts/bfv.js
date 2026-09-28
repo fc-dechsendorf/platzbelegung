@@ -2,7 +2,7 @@
   const base = 'https://service.bfv.de/rest/icsexport/Spielplan?staffel=';
   const club = '00ES8GNKSG00000CVV0AG08LVUPGND5I';
   const otherClub = '01VQC82JH8000000VS54898FVUOCROKJ';
-  const source = (row, team, staffel, id) => ({ id: `excel-${row}`, team, url: `${base}${staffel}&id=${id}`, active: true, row });
+  const source = (row, team, staffel, id) => ({ id: `excel-${row}`, team, url: `${base}${staffel}&id=${id}`, active: true, row, organization: row >= 24 && row !== 27 ? 'atletico' : 'fcd' });
   const defaults = [
     source(5, 'Herren', '03170DLLLS000006VS5489BUVSBBVPEU-G', club),
     source(7, 'A-Jugend', '031NDIRUTO000004VS5489BUVT2M8LCU-G', club),
@@ -12,11 +12,11 @@
     source(12, 'D-Jugend', '031NRDK19S000005VS5489BUVT2M8LCU-G', club),
     source(13, 'E-Jugend', '031S6E4KIO000005VS5489BTVTPHHFPR-G', club),
     source(24, 'Atletico Ü32', '02VPA7UUJO000006VS5489BTVTG66ASV-G', otherClub),
-    source(25, 'Atletico', '03170DHMDC000006VS5489BUVSBBVPEU-G', otherClub),
-    source(26, 'Atletico', '03170DLLLS000006VS5489BUVSBBVPEU-G', otherClub),
+    source(25, 'Atletico Herren', '03170DHMDC000006VS5489BUVSBBVPEU-G', otherClub),
+    source(26, 'Atletico II Herren', '03170DLLLS000006VS5489BUVSBBVPEU-G', otherClub),
     source(27, 'Atletico / A-Jugend', '031NDIRUTO000004VS5489BUVT2M8LCU-G', club),
     source(28, 'Atletico', '02TRS60ADS000009VS5489BUVVJ8R9DS-G', otherClub),
-    source(29, 'Atletico', '031PVQEDD8000004VS5489BUVSV0FPBG-G', otherClub),
+    source(29, 'Atlético Frauen Freizeitsport', '031PVQEDD8000004VS5489BUVSV0FPBG-G', otherClub),
     source(30, 'Atletico', '03011IFQOO000004VS5489BTVTLR7B3N-G', otherClub)
   ];
   const key = 'sg-bfv-sources-v1';
@@ -102,3 +102,4 @@
   }
   window.BfvData = { defaults, sources, saveSources, cached, refresh, parse, homeLocation };
 }());
+
