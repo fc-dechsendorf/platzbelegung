@@ -45,7 +45,8 @@ async function load() {
   window.AppData.trainingRules.splice(0, window.AppData.trainingRules.length,
     ...rows.training_rules.filter((row) => row.active).map((row) => [
       row.team, ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][row.weekday - 1],
-      shortTime(row.starts_at), shortTime(row.ends_at), row.place, typeFromCapacity(row.capacity)
+      shortTime(row.starts_at), shortTime(row.ends_at), row.place, typeFromCapacity(row.capacity),
+      row.event_key_template, row.valid_from, row.valid_until
     ]));
   window.AppData.mowingDates.clear();
   rows.mowing_dates.forEach((row) => window.AppData.mowingDates.add(row.mowing_date));
@@ -234,6 +235,43 @@ async function updatePassword(password) {
   needsPasswordSetup = false;
 }
 
+async function listTrainingRules() {
+  if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');
+  return check(await client.from('training_rules').select('*'));
+}
+async function saveTrainingRule(item) {
+  if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');
+  const row = {
+    team: String(item.team || '').trim(), weekday: Number(item.weekday),
+    starts_at: item.starts_at, ends_at: item.ends_at,
+    place: item.place, capacity: item.capacity,
+    organization: item.organization, active: Boolean(item.active),
+    valid_from: item.valid_from || null, valid_until: item.valid_until || null
+  };
+  if (!row.team || !Number.isInteger(row.weekday) || row.weekday < 1 || row.weekday > 7 ||
+      !['A', 'B', 'C'].includes(row.place) ||
+      !['1/1', '1/2', 'vorplatz'].includes(row.capacity) ||
+      (row.capacity === 'vorplatz' && row.place !== 'A') ||
+      !['fcd', 'atletico', 'other'].includes(row.organization) ||
+      !/^\d{2}:(00|15|30|45)$/.test(row.starts_at) ||
+      !/^\d{2}:(00|15|30|45)$/.test(row.ends_at) ||
+      row.starts_at >= row.ends_at ||
+      (row.valid_from && row.valid_until && row.valid_from > row.valid_until))
+    throw new Error('Bitte Mannschaft, Zeiten, Platz und Gültigkeit prüfen.');
+  const result = item.id
+    ? await client.from('training_rules').update(row).eq('id', item.id).select()
+    : await client.from('training_rules').insert(row).select();
+  const saved = check(result);
+  if (saved.length !== 1) throw new Error('Eintrag wurde nicht gespeichert. Bitte die Seite neu laden.');
+  return saved[0];
+}
+async function setTrainingRuleActive(id, active) {
+  if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');
+  const rows = check(await client.from('training_rules').update({ active }).eq('id', id).select());
+  if (rows.length !== 1) throw new Error('Eintrag wurde nicht geändert. Bitte die Seite neu laden.');
+  return rows[0];
+}
+
 async function listManagers() {
   return (await manageUsers('list')).users.filter((user) => user.role === 'manager');
 }
@@ -288,6 +326,7 @@ window.Cloud = { client, initialize, initializeAuth, load, read, save, role, log
   get needsPasswordSetup() { return needsPasswordSetup; },
   get authError() { return authError || (authInitialized && authFlow && !session ? 'invalid_link' : null); },
   updatePassword,
+  listTrainingRules, saveTrainingRule, setTrainingRuleActive,
   get sources() { return clone(sources); },
   get mowing() { return clone(mowing); },
   get lastImport() { return lastImport; },

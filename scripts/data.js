@@ -5,6 +5,7 @@ window.AppData = {
     ["A-Jugend", "Mo", "18:15", "20:00", "A", "halb"], ["A-Jugend", "Mi", "18:15", "20:00", "C", "voll"],
     ["B-Jugend", "Mi", "18:00", "20:00", "B", "halb"],
     ["D-Jugend", "Di", "17:30", "19:00", "A", "voll"],
+    ["D-Jugend", "Do", "17:30", "19:00", "C", "halb"],
     ["E-Jugend", "Mo", "17:30", "19:00", "A", "halb"], ["E-Jugend", "Do", "17:30", "19:00", "B", "halb"],
     ["F-Jugend", "Mo", "17:15", "18:45", "B", "halb"], ["F-Jugend", "Do", "17:15", "18:45", "B", "halb"],
     ["G-Jugend", "Mo", "17:00", "18:30", "B", "halb"], ["AH", "Mi", "19:00", "21:00", "B", "halb"],
