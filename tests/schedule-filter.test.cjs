@@ -19,3 +19,10 @@ test('Terminart, Suche und Datumsgrenzen wirken gemeinsam', () => {
   assert.equal(filter.matches(crossFeedGame, '2026-10-04', { ...all, game: false }), false);
 });
 
+test('BFV-Jugendspiel auf halbem Platz bleibt unter Spiele filterbar', () => {
+  const youthGame = { id: 'bfv-youth', type: 'halb', team: 'FC Dechsendorf-Gast', category: 'Liga', place: 'B' };
+  assert.equal(filter.group(youthGame), 'game');
+  assert.equal(filter.homeTeam(youthGame), 'FC Dechsendorf');
+  assert.equal(filter.matches(youthGame, '2026-10-04', { ...all, game: false }), false);
+});
+
