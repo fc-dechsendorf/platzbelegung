@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { format } = require('../scripts/game-title.js');
+const { format, halfPitchEligible } = require('../scripts/game-title.js');
 
 const sources = [
   { id: 'excel-5', team: 'Herren', organization: 'fcd' },
@@ -45,5 +45,17 @@ test('Ungeklärter Ort und fehlende Teamquelle führen zu keiner erfundenen Juge
     '(SC Adelsdorf 2 zg.)-FC Dechsendorf');
   assert.equal(format(game('Neues Team-SV Test', ['unbekannt']), sources).title,
     'Neues Team-SV Test');
+});
+
+test('halber Platz ist nur für eindeutig zugeordnete C- bis G-Jugendspiele wählbar', () => {
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-11']), sources), true);
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-12']), sources), true);
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-13']), sources), true);
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-f']), [...sources, { id: 'excel-f', team: 'F-Jugend', organization: 'fcd' }]), true);
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-g']), [...sources, { id: 'excel-g', team: 'G-Jugend', organization: 'fcd' }]), true);
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-7']), sources), false);
+  assert.equal(halfPitchEligible(game('FC Dechsendorf-Gast', ['excel-9']), sources), false);
+  assert.equal(halfPitchEligible(game('Atletico Erlangen-FC Dechsendorf', ['excel-13', 'excel-25']), sources), false);
+  assert.equal(halfPitchEligible(game('Unbekannt-Gast', ['unbekannt']), sources), false);
 });
 
