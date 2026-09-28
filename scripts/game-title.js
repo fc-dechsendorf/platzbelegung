@@ -36,7 +36,12 @@
       ? `${home} ${label}` : home;
     return { title: label ? `${heading} – ${away}` : name, homeTeam: heading };
   }
-  const api = { format };
+  function halfPitchEligible(game, sources = []) {
+    if (!game?.sourceIds?.length) return false;
+    const pair = parts(game?.name || '');
+    return Boolean(pair && /^[C-G]-Jugend(?:\s+\d+)?$/i.test(labelFor(game, sources, pair[0])));
+  }
+  const api = { format, halfPitchEligible };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.GameTitle = api;
 })(typeof window === 'undefined' ? globalThis : window);
