@@ -23,7 +23,7 @@ async function setup(stored = null, options = {}) {
   context.Cloud = { initialize: async () => ({ importedAt: null, games: [] }), role: () => '',
     read: (key, fallback) => key === 'sg-overrides' ? (options.overrides || fallback) : fallback };
   vm.createContext(context);
-  for (const file of ['data.js', 'language.js', 'schedule-filter.js']) vm.runInContext(fs.readFileSync(path.join(scripts, file), 'utf8'), context);
+  for (const file of ['data.js', 'language.js', 'game-title.js', 'schedule-filter.js']) vm.runInContext(fs.readFileSync(path.join(scripts, file), 'utf8'), context);
   if (options.game) context.AppData.bfvGames.push(options.game);
   vm.runInContext(fs.readFileSync(path.join(scripts, 'calendar.js'), 'utf8'), context);
   await new Promise(setImmediate);

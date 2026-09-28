@@ -18,6 +18,7 @@ function appContext() {
   vm.createContext(context);
   const run = (file) => vm.runInContext(fs.readFileSync(path.join(scripts, file), 'utf8'), context);
   run('bfv.js');
+  run('game-title.js');
   run('schedule-filter.js');
   return { context, run, values };
 }
@@ -49,6 +50,26 @@ test('BFV-Platznummer 1, 2 oder 3 beeinflusst die Platzwahl nicht', () => {
     assert.equal(game.id, 'bfv-test-game');
     assert.equal(game.place, 'A');
   }
+});
+
+test('BFV-Jugendspiel trägt die Mannschaft in der öffentlichen Terminüberschrift', async () => {
+  const { context, run } = appContext();
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const date = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+  const app = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+  context.document = { getElementById: () => app };
+  run('data.js');
+  context.AppData.bfvGames.push({ id: 'bfv-youth-heading', date, from: '12:00', to: '13:30',
+    name: 'FC Dechsendorf-TSV Frauenaurach', source: 'E-Jugend', sourceIds: ['excel-13'],
+    category: 'Pokal', status: 'Heimspiel', location: 'Sportanlage Erlangen Campingstrasse 38, 91056 Erlangen' });
+  context.Cloud = { initialize: async () => ({ importedAt: null, games: [] }), role: () => '',
+    read: (_, fallback) => fallback,
+    sources: [{ id: 'excel-13', team: 'E-Jugend', organization: 'fcd' }] };
+  run('calendar.js');
+  await new Promise(setImmediate);
+  assert.match(app.innerHTML, /FC Dechsendorf E-Jugend – TSV Frauenaurach/);
+  assert.match(app.innerHTML, /data-event="bfv-youth-heading"/);
 });
 
 test('Erlanger Sommer- und Winterzeit sowie lokale iCal-Zeiten', () => {
@@ -150,7 +171,7 @@ test('BFV-Spiel zeigt Ü32 und schützt die offizielle Spielzeit beim Bearbeiten
   run('calendar.js');
   await new Promise(setImmediate);
   gameButton.onclick();
-  assert.match(app.innerHTML, /Atletico Erlangen-SV Tennenlohe \(Ü32\)/);
+  assert.match(app.innerHTML, /Atletico Erlangen Ü32 – SV Tennenlohe/);
   assert.match(app.innerHTML, /BFV-ID<\/dt><dd>test-game/);
   assert.match(app.innerHTML, /BFV-Platzangabe<\/dt><dd>Für unsere Platzverteilung nicht maßgeblich/);
   handlers.get('[data-edit-event]')();

@@ -22,6 +22,7 @@ async function renderFor(day, { blocks = [], games = [], overrides = {} } = {}) 
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(scripts, 'data.js'), 'utf8'), context);
   context.AppData.bfvGames = games;
+  vm.runInContext(fs.readFileSync(path.join(scripts, 'game-title.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(scripts, 'schedule-filter.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(scripts, 'calendar.js'), 'utf8'), context);
   await new Promise(setImmediate);
