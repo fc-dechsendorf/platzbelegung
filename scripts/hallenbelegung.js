@@ -13,12 +13,6 @@
     { id: 'demo-7', day: 5, hall: 1, start: 900, end: 1020, text: 'Jugend' },
     { id: 'demo-8', day: 5, hall: 1, start: 1020, end: 1140, text: 'AH' }
   ];
-  const WINDOWS = {
-    3: [[1020, 1290, [1020, 1140, 1200, 1290]]],
-    5: [[540, 1260, [540, 630, 720, 810, 900, 1020, 1140, 1260]]],
-    6: [[540, 720, [540, 630, 720]], [900, 1020, [900, 1020]]]
-  };
-
   function time(minutes) {
     return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
   }
@@ -55,11 +49,9 @@
   }
 
   function rowsForDay(day, list) {
-    const original = [
-      ...(WINDOWS[day] || []).map(([start, end, points]) => ({ start, end, points })),
-      ...list.filter((entry) => entry.day === day)
-        .map((item) => ({ start: item.start, end: item.end, points: [item.start, item.end] }))
-    ].sort((a, b) => a.start - b.start || a.end - b.end);
+    const original = list.filter((entry) => entry.day === day)
+      .map((item) => ({ start: item.start, end: item.end, points: [item.start, item.end] }))
+      .sort((a, b) => a.start - b.start || a.end - b.end);
     const windows = [];
     for (const window of original) {
       const previous = windows.at(-1);
@@ -87,7 +79,8 @@
             item.start <= start && item.end >= end) || null) });
       }
     }
-    return rows.sort((a, b) => a.start - b.start || a.end - b.end);
+    return rows.filter((row) => row.entries.some(Boolean))
+      .sort((a, b) => a.start - b.start || a.end - b.end);
   }
 
   function spanAt(rows, index, hall) {
@@ -146,11 +139,8 @@
   }
 
   function publicMarkup() {
-    const days = [...new Set([3, 5, 6, ...bookings.map((item) => item.day)])].sort();
-    const allRows = days.flatMap((day) => {
-      const rows = rowsForDay(day, bookings);
-      return rows.length ? rows : [{ day, start: null, end: null, entries: [null, null] }];
-    });
+    const days = [...new Set(bookings.map((item) => item.day))].sort();
+    const allRows = days.flatMap((day) => rowsForDay(day, bookings));
     if (dataLoading) return '<section class="hall-panel" aria-live="polite">Hallenbelegung wird geladen …</section>';
     if (dataError) return `<section class="hall-panel hall-auth-message" role="alert">Die Hallenbelegung ist gerade nicht abrufbar: ${escapeHtml(dataError)}</section>`;
     if (!publicVisible && role !== 'admin') return '<section class="hall-panel"><h2>Hallenbelegung</h2><p>Der Standardplan ist derzeit nicht öffentlich freigeschaltet.</p></section>';
@@ -166,7 +156,7 @@
       <div class="hall-mobile-list">${days.map((day) => {
         const items = bookings.filter((entry) => entry.day === day)
           .sort((a, b) => a.start - b.start || a.hall - b.hall);
-        return `<section class="hall-mobile-day"><h3>${DAYS[day]}</h3>${items.length ? items.map((item) => `<div class="hall-mobile-row"><strong>${time(item.start)} – ${time(item.end)}</strong><div><small>${escapeHtml(HALLS[item.hall])}</small><span class="hall-mobile-filled">${escapeHtml(item.text)}</span></div></div>`).join('') : '<p>Keine Belegung eingetragen.</p>'}</section>`;
+        return `<section class="hall-mobile-day"><h3>${DAYS[day]}</h3>${items.map((item) => `<div class="hall-mobile-row"><strong>${time(item.start)} – ${time(item.end)}</strong><div><small>${escapeHtml(HALLS[item.hall])}</small><span class="hall-mobile-filled">${escapeHtml(item.text)}</span></div></div>`).join('')}</section>`;
       }).join('')}</div>
     </section>`;
   }
@@ -199,8 +189,8 @@
   }
 
   function loginMarkup() {
-    if (!loginOpen || role === 'admin') return '';
-    return `<dialog class="hall-dialog" id="hall-login" aria-labelledby="hall-login-title"><form id="hall-login-form"><button type="button" class="hall-dialog-close" data-close-login aria-label="Schließen">×</button><span class="eyebrow">Geschützter Bereich</span><h2 id="hall-login-title">Administrator anmelden</h2><p>Für die Bearbeitung gilt dein bestehender FC-Dechsendorf-Zugang.</p><label>E-Mail-Adresse<input name="email" type="email" autocomplete="username" required /></label><label>Passwort<input name="password" type="password" autocomplete="current-password" required /></label><p class="hall-form-error" role="alert" hidden></p><div class="hall-form-actions"><button type="submit" class="primary">Anmelden</button><button type="button" class="secondary" data-close-login>Abbrechen</button></div></form></dialog>`;
+    if (!loginOpen || role) return '';
+    return `<dialog class="hall-dialog" id="hall-login" aria-labelledby="hall-login-title"><form id="hall-login-form"><button type="button" class="hall-dialog-close" data-close-login aria-label="Schließen">×</button><span class="eyebrow">Geschützter Bereich</span><h2 id="hall-login-title">Anmelden</h2><p>Deine Rolle bestimmt automatisch, welche Funktionen verfügbar sind.</p><label>E-Mail-Adresse<input name="email" type="email" autocomplete="username" required /></label><label>Passwort<input name="password" type="password" autocomplete="current-password" required /></label><p class="hall-form-error" role="alert" hidden></p><div class="hall-form-actions"><button type="submit" class="primary">Anmelden</button><button type="button" class="secondary" data-close-login>Abbrechen</button></div></form></dialog>`;
   }
 
   async function verifyAdmin() {
@@ -211,8 +201,8 @@
 
   function render() {
     app.innerHTML = `<header class="app-header"><div class="brand-lockup"><img class="club-logo" src="assets/fc-dechsendorf-logo.png" alt="Wappen des FC Dechsendorf"><div><span class="eyebrow">FC Dechsendorf</span><h1>Hallenbelegung</h1><p>Standardplan für Dechsendorfer Halle und ASG Halle 1+2</p></div></div><div class="status"><span></span> Standardplan</div></header>
-      <div class="hall-toolbar"><p>Wiederkehrende Hallenbelegung · ${publicVisible ? 'öffentlich sichtbar' : 'derzeit nicht öffentlich'}</p><div>${authChecking ? '<span class="hall-auth-state">Anmeldung wird geprüft …</span>' : role === 'admin' ? `<button type="button" class="secondary" data-mode>${mode === 'public' ? 'Admin-Hallenbelegung' : 'Zur öffentlichen Ansicht'}</button><button type="button" class="secondary" data-logout>Abmelden</button>` : '<button type="button" class="secondary" data-login-open>Administrator anmelden</button>'}<button type="button" class="theme-toggle secondary" data-theme-toggle aria-label="Darstellung wechseln" aria-pressed="false">🌙 Dunkel</button></div></div>
-      <nav class="view-switch site-nav" aria-label="Bereiche"><a href="index.html">Wochenübersicht</a><a href="index.html#kalender">Kalenderansicht</a><span class="active" aria-current="page">Hallenbelegung</span><a href="statistik.html">Vorstand</a>${role === 'admin' ? '<a href="trainingsplan.html">Standardtraining</a>' : ''}</nav>
+      <div class="hall-toolbar"><p>Wiederkehrende Hallenbelegung · ${publicVisible ? 'öffentlich sichtbar' : 'derzeit nicht öffentlich'}</p><div>${authChecking ? '<span class="hall-auth-state">Anmeldung wird geprüft …</span>' : role ? `${role === 'admin' ? `<button type="button" class="secondary" data-mode>${mode === 'public' ? 'Admin-Hallenbelegung' : 'Zur öffentlichen Ansicht'}</button>` : ''}<button type="button" class="secondary" data-logout>Abmelden</button>` : '<button type="button" class="secondary" data-login-open>Anmelden</button>'}<button type="button" class="theme-toggle secondary" data-theme-toggle aria-label="Darstellung wechseln" aria-pressed="false">🌙 Dunkel</button></div></div>
+      <nav class="view-switch site-nav" aria-label="Bereiche"><a href="index.html">Wochenübersicht</a><a href="index.html#kalender">Kalenderansicht</a><span class="active" aria-current="page">Hallenbelegung</span><a href="statistik.html">Statistik</a>${role === 'admin' ? '<a href="trainingsplan.html">Standardtraining</a>' : ''}</nav>
       ${authMessage ? `<p class="hall-auth-message" role="alert">${escapeHtml(authMessage)}</p>` : ''}${notice ? `<p class="hall-notice" role="status">${escapeHtml(notice)}</p>` : ''}${publicMarkup()}${editorMarkup()}<footer class="hall-footer">Dieser Standardplan wiederholt sich wöchentlich. Änderungen sind nur nach Anmeldung als Administrator möglich.</footer>${formMarkup()}${loginMarkup()}`;
     app.querySelector('[data-public-visible]')?.addEventListener('change', async (event) => {
       const input = event.currentTarget;
@@ -265,10 +255,11 @@
       event.preventDefault();
       const form = new FormData(event.currentTarget);
       try {
-        await window.Cloud.login(String(form.get('email')), String(form.get('password')));
-        if (!await verifyAdmin()) throw new Error('Nur Administratoren dürfen die Hallenbelegung bearbeiten.');
-        role = 'admin'; loginOpen = false; mode = 'editor'; authMessage = ''; await loadBookings();
-        app.querySelector('#editor-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const signedInRole = await window.Cloud.login(String(form.get('email')), String(form.get('password')));
+        role = signedInRole === 'admin' && !await verifyAdmin() ? '' : signedInRole;
+        if (!role) throw new Error('Die Berechtigung konnte nicht bestätigt werden.');
+        loginOpen = false; mode = role === 'admin' ? 'editor' : 'public'; authMessage = ''; await loadBookings();
+        if (role === 'admin') app.querySelector('#editor-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (error) {
         const message = loginDialog.querySelector('.hall-form-error');
         message.textContent = error.message; message.hidden = false;
@@ -317,7 +308,8 @@
   render();
   loadBookings().catch((error) => { dataLoading = false; dataError = error.message; render(); });
   window.Cloud.initializeAuth().then(async () => {
-    if (window.Cloud.role() === 'admin' && await verifyAdmin()) role = 'admin';
+    role = window.Cloud.role();
+    if (role === 'admin' && !await verifyAdmin()) role = '';
     authChecking = false; await loadBookings();
   }).catch(() => {
     authChecking = false; authMessage = 'Die Anmeldung konnte nicht geprüft werden. Die öffentliche Hallenansicht bleibt verfügbar.'; render();
