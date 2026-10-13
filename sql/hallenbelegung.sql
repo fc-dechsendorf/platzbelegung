@@ -1,6 +1,6 @@
 -- Dokumentation der am 13.10.2026 angewandten Hallen-Schemaänderung.
 -- Auf der bestehenden Datenbank nicht erneut ausführen: Die offiziellen
--- Beispielbelegungen sind bereits angelegt und werden fortan im Admin-Bereich gepflegt.
+-- Hallenbelegungen sind bereits angelegt und werden fortan im Admin-Bereich gepflegt.
 create extension if not exists btree_gist with schema extensions;
 
 create table public.hall_settings (
