@@ -43,19 +43,19 @@
   }
   function render() {
     app.innerHTML = `<div class="wrap training-wrap"><header class="app-header"><div class="brand-lockup"><img class="club-logo" src="assets/fc-dechsendorf-logo.png" alt="Wappen des FC Dechsendorf"><div><span class="eyebrow">FC Dechsendorf</span><h1>Standardtrainingsplan</h1><p>Platzbelegungsplan · Verwaltung</p></div></div></header>
-      <div class="training-top"><button type="button" class="theme-toggle" data-theme-toggle>🌙 Dunkel</button>${role === 'admin' ? '<button type="button" data-logout>Abmelden</button>' : ''}</div>
-      <nav class="view-switch site-nav" aria-label="Bereiche"><a href="index.html">Wochenübersicht</a><a href="index.html#kalender">Kalenderansicht</a><a href="hallenbelegung.html">Hallenbelegung</a><a href="statistik.html">Vorstand</a><span class="active" aria-current="page">Standardtraining</span></nav>
+      <div class="training-top"><button type="button" class="theme-toggle" data-theme-toggle>🌙 Dunkel</button>${role ? '<button type="button" data-logout>Abmelden</button>' : ''}</div>
+      <nav class="view-switch site-nav" aria-label="Bereiche"><a href="index.html">Wochenübersicht</a><a href="index.html#kalender">Kalenderansicht</a><a href="hallenbelegung.html">Hallenbelegung</a><a href="statistik.html">Statistik</a><span class="active" aria-current="page">Standardtraining</span></nav>
       ${errorText ? `<p class="training-message error" role="alert">${esc(errorText)}</p>` : ''}${notice ? `<p class="training-message" role="status">${esc(notice)}</p>` : ''}
       ${role === 'admin' ? `<section class="training-intro"><h2>Trainingsregeln</h2><p>Änderungen erscheinen beim nächsten Laden der öffentlichen Platzbelegung. Es werden keine einzelnen Spiel- oder Trainingsanträge gelöscht.</p></section>${editor()}${list()}` :
-        `<section class="training-login"><h2>Administratorzugang</h2>${window.Cloud.needsPasswordSetup ? '<p>Bitte zuerst auf der Platzbelegungsseite dein Passwort festlegen.</p><a href="index.html">Zur Platzbelegung</a>' : `<p>Dieser Bereich ist nur für Administratoren zugänglich.</p><form data-login><label>E-Mail-Adresse<input name="email" type="email" autocomplete="username" required></label><label>Passwort<input name="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Anmelden</button></form>`}</section>`}</div>`;
+        `<section class="training-login"><h2>${role ? 'Keine Berechtigung' : 'Anmelden'}</h2>${role ? '<p>Der Standardtrainingsplan kann nur von Administratoren bearbeitet werden.</p>' : window.Cloud.needsPasswordSetup ? '<p>Bitte zuerst auf der Platzbelegungsseite dein Passwort festlegen.</p><a href="index.html">Zur Platzbelegung</a>' : `<p>Deine Rolle bestimmt automatisch, welche Funktionen verfügbar sind.</p><form data-login><label>E-Mail-Adresse<input name="email" type="email" autocomplete="username" required></label><label>Passwort<input name="password" type="password" autocomplete="current-password" required></label><button class="primary" type="submit">Anmelden</button></form>`}</section>`}</div>`;
     app.querySelector('[data-login]')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       try {
         await window.Cloud.login(String(data.get('email')), String(data.get('password')));
         role = window.Cloud.role();
-        if (role !== 'admin') throw new Error('Nur Administratoren dürfen den Standardplan bearbeiten.');
-        errorText = ''; await loadRows();
+        if (role === 'admin') { errorText = ''; await loadRows(); }
+        else { errorText = ''; render(); }
       } catch (error) { errorText = error.message; render(); }
     });
     app.querySelector('[data-logout]')?.addEventListener('click', async () => {
@@ -98,6 +98,6 @@
   window.Cloud.initializeAuth().then(async () => {
     role = window.Cloud.role();
     if (role === 'admin') await loadRows();
-    else { if (role === 'manager') errorText = 'Nur Administratoren dürfen den Standardplan bearbeiten.'; render(); }
+    else render();
   }).catch(() => { errorText = 'Die Anmeldung konnte nicht geprüft werden. Bitte die Seite neu laden.'; render(); });
 })();
