@@ -1,6 +1,4 @@
 .stats-wrap{max-width:1160px}
-.stats-back{display:inline-flex;align-items:center;min-height:39px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--club-blue-deep);font-size:.82rem;font-weight:800;text-decoration:none}
-.stats-back:hover{text-decoration:underline}
 .stats-intro,.stats-seasons,.stats-login,.stats-board-admin{margin:16px 0;padding:22px;border:1px solid var(--line);border-radius:15px;background:var(--paper)}
 .stats-intro h2,.stats-seasons h2,.stats-login h2{margin:0 0 6px;font-size:1.18rem}
 .stats-intro p,.stats-seasons p,.stats-login p{margin:5px 0;color:var(--muted)}
