@@ -207,7 +207,7 @@ async function initialize() {
 }
 function role() {
   const value = session?.user?.app_metadata?.fcd_role;
-  return value === 'admin' || value === 'manager' ? value : '';
+  return ['admin', 'manager', 'board'].includes(value) ? value : '';
 }
 async function login(email, password) {
   const result = await client.auth.signInWithPassword({ email, password });
