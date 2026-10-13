@@ -3,6 +3,7 @@
   const client = window.Cloud.client;
   const startYear = 2026;
   let role = '';
+  let accountRole = '';
   let rows = [];
   let latestDay = null;
   let openYear = new Date().getFullYear();
@@ -61,8 +62,19 @@
   }
   function render() {
     app.innerHTML = `<div class="wrap stats-wrap"><header class="app-header"><div class="brand-lockup"><img class="club-logo" src="assets/fc-dechsendorf-logo.png" alt="Wappen des FC Dechsendorf"><div><span class="eyebrow">FC Dechsendorf</span><h1>Vorstand</h1><p>Platzbelegungsplan · geschützter Bereich</p></div></div></header><div class="management-actions"><a class="stats-back" href="index.html">← Platzbelegungsplan</a><button type="button" class="theme-toggle" data-theme-toggle aria-label="Darstellung wechseln" aria-pressed="false">🌙 Dunkel</button>${role ? `<span>Angemeldet: ${role === 'admin' ? 'Administrator' : 'Vorstand'} <button type="button" data-logout>Abmelden</button></span>` : ''}</div>${errorText ? `<p class="stats-error" role="alert">${esc(errorText)}</p>` : ''}${role ? statisticsMarkup() : `<section class="stats-login"><h2>Anmeldung für Vorstand und Administrator</h2><p>Die Auswertung ist erst nach Anmeldung sichtbar.</p>${window.Cloud.needsPasswordSetup ? `<form data-set-password><label>Neues Passwort<input name="password" type="password" minlength="12" autocomplete="new-password" required></label><label>Wiederholung<input name="confirm" type="password" minlength="12" autocomplete="new-password" required></label><button class="primary">Zugang aktivieren</button></form>` : `<form data-login><label>E-Mail-Adresse<input name="email" type="email" autocomplete="username" required></label><label>Passwort<input name="password" type="password" autocomplete="current-password" required></label><button class="primary">Anmelden</button></form>`}</section>`}</div>`;
+    document.title = 'Statistik · FC Dechsendorf';
+    const heading = app.querySelector('.app-header h1');
+    if (heading) heading.textContent = 'Statistik';
     app.querySelector('.stats-back')?.remove?.();
-    app.querySelector('.management-actions')?.insertAdjacentHTML?.('afterend', `<nav class="view-switch site-nav" aria-label="Bereiche"><a href="index.html">Wochenübersicht</a><a href="index.html#kalender">Kalenderansicht</a><a href="hallenbelegung.html">Hallenbelegung</a><span class="active" aria-current="page">Vorstand</span>${role === 'admin' ? '<a href="trainingsplan.html">Standardtraining</a>' : ''}</nav>`);
+    app.querySelector('.management-actions > span')?.remove?.();
+    if (accountRole) app.querySelector('.management-actions')?.insertAdjacentHTML?.('afterbegin', `<span class="account-status">Angemeldet: ${{admin:'Administrator',board:'Vorstand',manager:'Abteilungsleitung'}[accountRole]}</span><button type="button" data-logout>Abmelden</button>`);
+    app.querySelector('.management-actions')?.insertAdjacentHTML?.('afterend', `<nav class="view-switch site-nav" aria-label="Bereiche"><a href="index.html">Wochenübersicht</a><a href="index.html#kalender">Kalenderansicht</a><a href="hallenbelegung.html">Hallenbelegung</a><span class="active" aria-current="page">Statistik</span>${accountRole === 'admin' ? '<a href="trainingsplan.html">Standardtraining</a>' : ''}</nav>`);
+    const loginHeading = app.querySelector('.stats-login h2');
+    if (loginHeading) loginHeading.textContent = 'Anmelden';
+    if (accountRole && !role) {
+      const loginPanel = app.querySelector('.stats-login');
+      if (loginPanel) loginPanel.innerHTML = '<h2>Keine Statistik-Berechtigung</h2><p>Die Auswertung ist nur für Vorstand und Administrator sichtbar.</p>';
+    }
     app.querySelectorAll('[data-year]').forEach((button) => button.addEventListener('click', () => {
       const year = Number(button.dataset.year);
       openYear = openYear === year ? null : year;
@@ -71,10 +83,8 @@
     app.querySelector('[data-login]')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
-      const result = await client.auth.signInWithPassword({
-        email: String(form.get('email')), password: String(form.get('password'))
-      });
-      if (result.error) { errorText = 'Anmeldung fehlgeschlagen.'; render(); return; }
+      try { accountRole = await window.Cloud.login(String(form.get('email')), String(form.get('password'))); }
+      catch { errorText = 'Anmeldung fehlgeschlagen.'; render(); return; }
       await refresh();
     });
     app.querySelector('[data-set-password]')?.addEventListener('submit', async (event) => {
@@ -87,7 +97,7 @@
       catch { errorText = 'Das Passwort konnte nicht gespeichert werden.'; render(); }
     });
     app.querySelector('[data-logout]')?.addEventListener('click', async () => {
-      await client.auth.signOut(); role = ''; rows = []; latestDay = null; render();
+      await window.Cloud.logout(); role = ''; accountRole = ''; rows = []; latestDay = null; render();
     });
     app.querySelector('[data-invite-board]')?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -130,6 +140,7 @@
     }
     if (window.Cloud.needsPasswordSetup) { role = ''; rows = []; render(); return; }
     const user = await client.auth.getUser();
+    accountRole = user.error ? '' : window.Cloud.role();
     role = user.error ? '' : boardRole(user.data.user);
     if (!role) {
       rows = []; latestDay = null;
