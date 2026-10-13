@@ -5,6 +5,9 @@
 .site-nav>a:focus-visible,.site-nav>button:focus-visible{outline:3px solid #e8ae21;outline-offset:2px}
 [data-theme="dark"] .site-nav>a:hover,[data-theme="dark"] .site-nav>button:hover{background:#29476c;color:#eef5ff}
 [data-theme="dark"] .site-nav>.active,[data-theme="dark"] .site-nav>span.active{background:#316dbd;color:#fff}
+.management-actions .account-status{margin:0;color:var(--muted);font-size:.78rem;font-weight:750}
+.training-top [data-logout]{border:1px solid #bcd0ea;border-radius:9px;padding:8px 11px;background:var(--paper);color:var(--club-blue-deep);font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}
+[data-theme="dark"] .training-top [data-logout]{border-color:#46638a;background:#1c3050;color:#eef5ff}
 @media(max-width:760px){
   .view-switch.site-nav,.hall-app .view-switch.site-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;max-width:100%;gap:4px}
   .site-nav>a,.site-nav>span,.site-nav>button,.hall-app .site-nav>a,.hall-app .site-nav>span{min-width:0;min-height:44px;padding:9px 7px;font-size:.78rem;line-height:1.2;white-space:normal}
