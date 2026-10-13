@@ -314,9 +314,18 @@
     const legendHeading = { de: 'Legende', en: 'Legend', es: 'Leyenda' }[language?.current() || 'de'];
     const legendFooter = app.querySelector('footer');
     if (legendFooter) legendFooter.outerHTML = `<footer class="booking-legend" aria-label="${esc(legendHeading)}"><h2>${esc(legendHeading)}</h2><div class="legend-list">${['training', 'game', 'manual', 'special', 'pending', 'unresolved', 'archery'].map((kind, index) => `<div class="legend-box ${kind}">${esc(legendText[index])}</div>`).join('')}</div></footer>`;
-    app.querySelector('.view-switch')?.insertAdjacentHTML?.('beforebegin', filterMarkup(filteredData));
-    const hallLabel = { de: 'Hallenbelegung', en: 'Indoor halls', es: 'Pabellones' }[language?.current() || 'de'];
-    app.querySelector('.view-switch')?.insertAdjacentHTML?.('beforeend', `<a class="hall-nav-link" href="hallenbelegung.html">${esc(hallLabel)} <span aria-hidden="true">↗</span></a>`);
+    app.querySelector('.view-switch')?.insertAdjacentHTML?.('afterend', filterMarkup(filteredData));
+    const navLanguage = language?.current() || 'de';
+    const hallLabel = { de: 'Hallenbelegung', en: 'Indoor halls', es: 'Pabellones' }[navLanguage];
+    const boardLabel = { de: 'Vorstand', en: 'Board', es: 'Directiva' }[navLanguage];
+    const trainingLabel = { de: 'Standardtraining', en: 'Regular training', es: 'Entrenamiento habitual' }[navLanguage];
+    app.querySelector('.management-actions a[href="statistik.html"]')?.remove?.();
+    app.querySelector('.view-switch')?.classList?.add?.('site-nav');
+    app.querySelector('.view-switch')?.setAttribute?.('aria-label', 'Bereiche');
+    app.querySelector('.view-switch')?.insertAdjacentHTML?.('beforeend', `<a href="hallenbelegung.html">${esc(hallLabel)}</a><a href="statistik.html">${esc(boardLabel)}</a>${role === 'admin' ? `<a href="trainingsplan.html">${esc(trainingLabel)}</a>` : ''}`);
+    app.querySelectorAll('.view-switch [data-view]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.view === view));
+    });
     app.querySelector('[data-filter-form]')?.addEventListener('submit', (event) => {
       event.preventDefault();
       const form = event.currentTarget, values = new FormData(form);
@@ -332,7 +341,7 @@
     if (window.Cloud.authError) app.querySelector('.management-actions')?.insertAdjacentHTML('afterend',
       '<p class="mowing-status" role="alert">Dieser Einmallink ist ungültig oder abgelaufen. Bitte beim Administrator einen neuen Link anfordern.</p>');
     if (role === 'admin') app.querySelector('[data-bfv-panel]')?.insertAdjacentHTML?.('afterend',
-      '<a class="management-link" href="trainingsplan.html">Standardtraining</a><button data-users-panel>Zugänge</button>');
+      '<button data-users-panel>Zugänge</button>');
     app.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => { view = button.dataset.view; render(); }); app.querySelectorAll('[data-week]').forEach((button) => button.onclick = () => { openWeek = openWeek === Number(button.dataset.week) ? null : Number(button.dataset.week); render(); }); app.querySelectorAll('[data-shift]').forEach((button) => button.onclick = () => { openWeek = Math.max(0, Math.min(5, openWeek + Number(button.dataset.shift))); render(); });
     app.querySelector('[data-language]')?.addEventListener('change', (event) => { language?.set(event.target.value); render(); });
     app.querySelectorAll('[data-open]').forEach((button) => button.onclick = () => { modal = button.dataset.open; render(); }); app.querySelectorAll('[data-close]').forEach((button) => button.onclick = () => { modal = null; render(); }); app.querySelector('[data-logout]')?.addEventListener('click', async () => { try { await window.Cloud.logout(); role = ''; render(); } catch (error) { alert(error.message); } });
