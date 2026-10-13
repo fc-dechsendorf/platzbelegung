@@ -18,7 +18,7 @@
   const hourMarks = Array.from({ length: 14 }, (_, n) => `${String(n + 9).padStart(2, '0')}:00`);
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
-  let view = 'weeks', openWeek = 0, modal = null, selectedEvent = null, selectedRequest = null;
+  let view = window.location?.hash === '#kalender' ? 'calendar' : 'weeks', openWeek = 0, modal = null, selectedEvent = null, selectedRequest = null;
   let filter = { query: '', team: '', training: true, game: true, other: true, from: '', to: '' };
   let role = '';
   const fmtDate = (date) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' }).format(date);
@@ -306,7 +306,17 @@
     const filteredData = filterData();
     document.title = t('title', 'FC Dechsendorf - Platzbelegungsplan');
     app.innerHTML = `<main class="wrap"><header class="app-header"><div class="brand-lockup"><img class="club-logo" src="assets/fc-dechsendorf-logo.png" alt="Wappen des FC Dechsendorf"><div><span class="eyebrow">FC Dechsendorf</span><h1>${t('title', 'FC Dechsendorf - Platzbelegungsplan')}</h1><p>${t('subtitle', 'Standardtrainingsplan · öffentliche Übersicht')}</p></div></div><div class="status"><span></span> ${t('season', 'Saison')} 2026/27</div></header><div class="management-actions"><button data-open="manager">Abteilungsleitung</button><button data-open="admin">Administrator</button><a class="management-link" href="statistik.html">Vorstand</a>${role ? `<button data-new-event>Neuer Termin</button>${role === 'admin' ? '<button data-admin-panel>Beantragungen</button><button data-bfv-panel>iCal-Quellen</button>' : ''}<span>Angemeldet: ${role === 'admin' ? 'Administrator' : 'Abteilungsleitung'} <button data-logout>Abmelden</button></span>` : ''}<label class="language-picker"><span aria-hidden="true">🌐</span><select data-language aria-label="Sprache / Language / Idioma"><option value="de" ${language?.current() === 'de' || !language ? 'selected' : ''}>Deutsch</option><option value="en" ${language?.current() === 'en' ? 'selected' : ''}>English</option><option value="es" ${language?.current() === 'es' ? 'selected' : ''}>Español</option></select></label><button type="button" class="theme-toggle" data-theme-toggle aria-label="Darstellung wechseln" aria-pressed="false">🌙 Dunkel</button></div><p class="bfv-status">${esc(displayedBfv)}</p>${mowingDates.size ? '' : `<p class="mowing-status">${t('mowingEmpty', 'Mähplan: Noch keine Termine eingetragen.')}</p>`}<nav class="view-switch"><button data-view="weeks" class="${view === 'weeks' ? 'active' : ''}">${t('weeks', 'Wochenübersicht')}</button><button data-view="calendar" class="${view === 'calendar' ? 'active' : ''}">${t('calendar', 'Kalenderansicht')}</button></nav>${view === 'weeks' ? weeksMarkup() : calendarMarkup()}<footer>${t('legend', 'Grün: Standardtraining. Blau: BFV-Spiele. Gelb: manuell übernommene Termine und Änderungen. Lila: Sonderereignisse und Platzsperren. Orange gestrichelt: beantragt. Rot: Klärung erforderlich. Grau: Bogenschützen-Hinweis auf 1/2 C-Platz.')}</footer></main><div class="modal-backdrop ${modal ? 'show' : ''}">${modalMarkup()}</div>`;
+    const legendText = {
+      de: ['Standardtraining', 'Liga-, Pokal- und Freundschaftsspiel', 'Manuell bestätigter Termin / Änderung', 'Sonderereignis / Platzsperre', 'Beantragt · noch nicht freigegeben', 'Konflikt · Klärung erforderlich', 'Bogenschützen · 1/2 C-Platz'],
+      en: ['Regular training', 'League, cup or friendly match', 'Manually approved booking / change', 'Special event / pitch closure', 'Requested · not yet approved', 'Conflict · clarification required', 'Archery · half of pitch C'],
+      es: ['Entrenamiento habitual', 'Partido de liga, copa o amistoso', 'Reserva / cambio confirmado manualmente', 'Evento especial / cierre del campo', 'Solicitado · aún sin aprobar', 'Conflicto · requiere aclaración', 'Tiro con arco · medio campo C']
+    }[language?.current() || 'de'];
+    const legendHeading = { de: 'Legende', en: 'Legend', es: 'Leyenda' }[language?.current() || 'de'];
+    const legendFooter = app.querySelector('footer');
+    if (legendFooter) legendFooter.outerHTML = `<footer class="booking-legend" aria-label="${esc(legendHeading)}"><h2>${esc(legendHeading)}</h2><div class="legend-list">${['training', 'game', 'manual', 'special', 'pending', 'unresolved', 'archery'].map((kind, index) => `<div class="legend-box ${kind}">${esc(legendText[index])}</div>`).join('')}</div></footer>`;
     app.querySelector('.view-switch')?.insertAdjacentHTML?.('beforebegin', filterMarkup(filteredData));
+    const hallLabel = { de: 'Hallenbelegung', en: 'Indoor halls', es: 'Pabellones' }[language?.current() || 'de'];
+    app.querySelector('.view-switch')?.insertAdjacentHTML?.('beforeend', `<a class="hall-nav-link" href="hallenbelegung.html">${esc(hallLabel)} <span aria-hidden="true">↗</span></a>`);
     app.querySelector('[data-filter-form]')?.addEventListener('submit', (event) => {
       event.preventDefault();
       const form = event.currentTarget, values = new FormData(form);
@@ -565,4 +575,3 @@
     app.innerHTML = `<main class="wrap"><h1>Platzbelegungsplan vorübergehend nicht verfügbar</h1><p>Die gemeinsamen Daten konnten nicht geladen werden. Bitte später erneut versuchen.</p><p class="access-note">${esc(error.message)}</p></main>`;
   }
 }());
-
