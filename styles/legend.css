@@ -1,5 +1,8 @@
 .booking-legend{margin:22px 0 0;padding:18px;border:1px solid var(--line);border-radius:15px;background:var(--paper)}
 .booking-legend h2{margin:0 0 12px;font-size:.98rem;color:var(--ink)}
+.legal-links{display:flex;justify-content:center;align-items:center;gap:10px;margin:14px 0 6px;font-size:.78rem;color:var(--ink)}
+.legal-links a{color:inherit;text-decoration:underline;text-underline-offset:3px;padding:5px 2px}
+.legal-links a:hover,.legal-links a:focus-visible{text-decoration-thickness:2px}
 .legend-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px}
 .legend-box{display:flex;align-items:center;min-height:52px;padding:9px 11px;border:1px solid #9bd5ba;border-left:4px solid var(--training);border-radius:7px;background:var(--training-pale);color:#0f513d;font-size:.79rem;font-weight:750;line-height:1.3}
 .legend-box.game{background:var(--club-blue-pale);border-color:#b7cfec;border-left-color:var(--club-blue);color:var(--club-blue-deep)}

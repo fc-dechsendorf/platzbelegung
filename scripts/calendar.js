@@ -322,7 +322,7 @@
     }[language?.current() || 'de'];
     const legendHeading = { de: 'Legende', en: 'Legend', es: 'Leyenda' }[language?.current() || 'de'];
     const legendFooter = app.querySelector('footer');
-    if (legendFooter) legendFooter.outerHTML = `<footer class="booking-legend" aria-label="${esc(legendHeading)}"><h2>${esc(legendHeading)}</h2><div class="legend-list">${['training', 'game', 'manual', 'special', 'pending', 'unresolved', 'archery'].map((kind, index) => `<div class="legend-box ${kind}">${esc(legendText[index])}</div>`).join('')}</div></footer>`;
+    if (legendFooter) legendFooter.outerHTML = `<footer class="booking-legend" aria-label="${esc(legendHeading)}"><h2>${esc(legendHeading)}</h2><div class="legend-list">${['training', 'game', 'manual', 'special', 'pending', 'unresolved', 'archery'].map((kind, index) => `<div class="legend-box ${kind}">${esc(legendText[index])}</div>`).join('')}</div></footer><nav class="legal-links" aria-label="Rechtliche Informationen"><a href="https://www.fcd-er.de/impressum.html">Impressum</a><span aria-hidden="true">·</span><a href="https://www.fcd-er.de/datenschutz.html">Datenschutz</a></nav>`;
     app.querySelector('.view-switch')?.insertAdjacentHTML?.('afterend', filterMarkup(filteredData));
     const navLanguage = language?.current() || 'de';
     const hallLabel = { de: 'Hallenbelegung', en: 'Indoor halls', es: 'Pabellones' }[navLanguage];
