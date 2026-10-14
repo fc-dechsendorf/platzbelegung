@@ -1,0 +1,61 @@
+begin;
+do $test$
+declare uid uuid:='25f4325b-18d1-40ba-9645-8fec15ea5855'; sid uuid:=gen_random_uuid(); fid uuid:=gen_random_uuid();
+ hashes text[]; result jsonb; claims jsonb; n integer; other_user uuid;
+begin
+ select array_agg(md5(i::text)||md5((i+100)::text)) into hashes from generate_series(1,10) i;
+ insert into auth.sessions(id,user_id,created_at,updated_at,aal) values(sid,uid,now(),now(),'aal1');
+ claims:=jsonb_build_object('sub',uid,'role','authenticated','session_id',sid,'aal','aal1','app_metadata',jsonb_build_object('fcd_role','admin'));
+ perform set_config('request.jwt.claims',claims::text,true);
+ perform set_config('role','authenticated',true);
+ if public.protected_session_role() is distinct from 'admin' then raise exception 'Existing owner blocked before opt-in'; end if;
+ begin perform public.owner_mfa_control(uid,sid,'status'); raise exception 'Authenticated recovery RPC exposed'; exception when insufficient_privilege then null; end;
+ begin perform count(*) from fcd_security.mfa_recovery_codes; raise exception 'Recovery hashes exposed'; exception when insufficient_privilege then null; end;
+ perform set_config('role','postgres',true);
+ result:=public.owner_mfa_control(uid,sid,'status');
+ if (result->>'required')::boolean then raise exception 'Premature MFA enforcement'; end if;
+ begin perform public.owner_mfa_control(uid,sid,'codes',hashes); raise exception 'AAL1 generated codes'; exception when insufficient_privilege then null; end;
+ insert into auth.mfa_factors(id,user_id,factor_type,status,created_at,updated_at) values(fid,uid,'totp','verified',now(),now());
+ update auth.sessions set aal='aal2',factor_id=fid where id=sid;
+ perform public.owner_mfa_control(uid,sid,'codes',hashes);
+ perform public.owner_mfa_control(uid,sid,'activate');
+ perform set_config('role','authenticated',true);
+ if public.protected_session_role() is not null then raise exception 'Stale AAL1 token passed'; end if;
+ if exists(select 1 from public.schedule_requests) then raise exception 'AAL1 private data leak'; end if;
+ update public.hall_settings set public_visible=public_visible where id=1;
+ get diagnostics n=row_count;
+ if n<>0 then raise exception 'AAL1 admin write accepted'; end if;
+ perform count(*) from public.public_schedule_events();
+ perform count(*) from public.public_event_overrides();
+ perform set_config('request.jwt.claims',jsonb_set(claims,'{aal}','"aal2"')::text,true);
+ if public.protected_session_role() is distinct from 'admin' then raise exception 'Verified MFA rejected'; end if;
+ perform set_config('role','postgres',true);
+ for n in 1..5 loop
+  result:=public.owner_mfa_control(uid,sid,'attempt');
+  if not (result->>'allowed')::boolean then raise exception 'Rate limit too early'; end if;
+ end loop;
+ if (public.owner_mfa_control(uid,sid,'attempt')->>'allowed')::boolean then raise exception 'No recovery rate limit'; end if;
+ result:=public.owner_mfa_control(uid,sid,'recover',array[hashes[1]]);
+ if not (result->>'ok')::boolean then raise exception 'Recovery failed'; end if;
+ if (public.owner_mfa_control(uid,sid,'recover',array[hashes[1]])->>'ok')::boolean then raise exception 'Code reused'; end if;
+ perform set_config('role','authenticated',true);
+ if public.protected_session_role() is not null then raise exception 'Recovery granted administration'; end if;
+ perform set_config('role','postgres',true);
+ -- A second session cannot complete this recovery, even with its previously valid MFA.
+ declare sid2 uuid:=gen_random_uuid(); begin
+  insert into auth.sessions(id,user_id,created_at,updated_at,aal,factor_id) values(sid2,uid,now(),now(),'aal2',fid);
+  begin perform public.owner_mfa_control(uid,sid2,'activate'); raise exception 'Different session completed recovery'; exception when insufficient_privilege then null; end;
+ end;
+ perform public.owner_mfa_control(uid,sid,'codes',hashes);
+ perform public.owner_mfa_control(uid,sid,'activate');
+ perform set_config('role','authenticated',true);
+ if public.protected_session_role() is distinct from 'admin' then raise exception 'Recovery could not complete'; end if;
+ perform set_config('role','postgres',true);
+ update auth.mfa_factors set status='unverified' where id=fid;
+ perform set_config('role','authenticated',true);
+ if public.protected_session_role() is not null then raise exception 'Removed factor still authorized'; end if;
+ perform set_config('role','postgres',true);
+ select id into other_user from auth.users where id<>uid and raw_app_meta_data->>'fcd_role'='admin' limit 1;
+ begin perform public.owner_mfa_control(other_user,sid,'status'); raise exception 'Other account managed owner MFA'; exception when insufficient_privilege then null; end;
+end $test$;
+rollback;

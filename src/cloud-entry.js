@@ -26,6 +26,29 @@ let lastImport = null;
 let needsPasswordSetup = false;
 let authInitialized = false;
 let setupCompleted = false;
+const mfaOwnerId = '25f4325b-18d1-40ba-9645-8fec15ea5855';
+let mfaBlocked = false;
+let authInteraction = false;
+const tokenLevel = (value) => {
+  try { return JSON.parse(atob(value.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).aal; }
+  catch { return 'aal1'; }
+};
+async function websiteMfa(action, payload = {}) {
+  const result = await client.functions.invoke('owner-mfa', { body: { action, ...payload } });
+  if (result.error || result.data?.error) throw new Error(result.data?.error || 'Sicherheitsprüfung nicht erreichbar. Bitte erneut versuchen.');
+  if (action === 'status') {
+    result.data.strong = result.data.strong && tokenLevel(session) === 'aal2';
+    result.data.blocked = result.data.blocked || (result.data.required && !result.data.strong);
+  }
+  return result.data;
+}
+async function refreshMfaStatus() {
+  mfaBlocked = session?.user?.id === mfaOwnerId;
+  if (!mfaBlocked) return;
+  const status = await websiteMfa('status');
+  mfaBlocked = status.blocked || (status.required && tokenLevel(session) !== 'aal2');
+  return status;
+}
 const authError = typeof window !== 'undefined' && window.location
   ? new URLSearchParams(window.location.hash.slice(1)).get('error_code') ||
     new URLSearchParams(window.location.search).get('error_code')
@@ -210,6 +233,13 @@ async function initializeAuth() {
   const result = await client.auth.getSession();
   check(result);
   session = result.data.session;
+  // A personal security-service outage must not hide the public calendar.
+  let mfaStatus;
+  try { mfaStatus = await refreshMfaStatus(); }
+  catch { mfaStatus = { blocked: true }; }
+  if (session?.user?.id === mfaOwnerId && typeof document !== 'undefined') {
+    setTimeout(() => window.WebsiteMFA?.mount(mfaStatus), 0);
+  }
   needsPasswordSetup = Boolean(session && !setupCompleted && (
     session.user?.user_metadata?.fcd_password_setup_pending === true ||
     (session.user?.user_metadata?.fcd_password_setup_pending !== false &&
@@ -217,14 +247,16 @@ async function initializeAuth() {
   if (!authInitialized) {
     client.auth.onAuthStateChange((_event, current) => {
       const changed = session?.user?.id !== current?.user?.id ||
-        session?.user?.app_metadata?.fcd_role !== current?.user?.app_metadata?.fcd_role;
+        session?.user?.app_metadata?.fcd_role !== current?.user?.app_metadata?.fcd_role ||
+        (current?.user?.id === mfaOwnerId && tokenLevel(session) !== tokenLevel(current));
       session = current;
       if (changed) {
+        mfaBlocked = current?.user?.id === mfaOwnerId;
         state['sg-requests'] = [];
         state['sg-overrides'] = {};
         // A different tab can sign out or change the active account.
         // Reload outside the auth callback, without waiting on auth methods.
-        if (loaded) setTimeout(() => window.location?.reload?.(), 0);
+        if (loaded && !authInteraction && !window.WebsiteMFA?.busy) setTimeout(() => window.location?.reload?.(), 0);
       }
     });
     authInitialized = true;
@@ -236,20 +268,37 @@ async function initialize() {
   return load();
 }
 function role() {
+  if (mfaBlocked) return '';
   const value = session?.user?.app_metadata?.fcd_role;
   return ['admin', 'manager', 'board'].includes(value) ? value : '';
 }
 async function login(email, password) {
+  authInteraction = true;
+  try {
   const result = await client.auth.signInWithPassword({ email, password });
   check(result);
   session = result.data.session;
-  if (!role()) {
+  if (!['admin', 'manager', 'board'].includes(session?.user?.app_metadata?.fcd_role)) {
     await client.auth.signOut();
     session = null;
     throw new Error('Für dieses Konto ist noch keine Berechtigung eingerichtet.');
   }
+  let status = await refreshMfaStatus();
+  if (mfaBlocked) {
+    if (!window.WebsiteMFA) throw new Error('MFA-Anmeldedialog fehlt. Bitte Seite neu laden.');
+    await window.WebsiteMFA.authenticate(status);
+    await initializeMfaSession();
+    status = await refreshMfaStatus();
+  }
+  if (session?.user?.id === mfaOwnerId) window.WebsiteMFA?.mount(status);
   if (loaded) await load();
   return role();
+  } finally { authInteraction = false; }
+}
+async function initializeMfaSession() {
+  session = check(await client.auth.getSession()).session;
+  await refreshMfaStatus();
+  if (mfaBlocked) throw new Error('Bitte MFA-Einrichtung vollständig abschließen.');
 }
 async function logout() {
   check(await client.auth.signOut());
@@ -358,6 +407,7 @@ async function removeMowing(date) {
 }
 
 window.Cloud = { client, initialize, initializeAuth, load, read, save, role, login, logout,
+  websiteMfa, initializeMfaSession,
   get needsPasswordSetup() { return needsPasswordSetup; },
   get authError() { return authError || (authInitialized && authFlow && !session ? 'invalid_link' : null); },
   updatePassword,

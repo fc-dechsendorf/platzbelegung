@@ -40,6 +40,11 @@ Deno.serve(async (request) => {
   if (identityError || !identity.user) return response(401, { error: 'Sitzung ungültig.' });
   if (identity.user.app_metadata?.fcd_role !== 'admin')
     return response(403, { error: 'Administratorrechte erforderlich.' });
+  const caller = createClient(url, secret, { ...{ auth: { persistSession: false, autoRefreshToken: false } },
+    global: { headers: { Authorization: authorization } } });
+  const current = await caller.rpc('protected_session_role');
+  if (current.error || current.data !== 'admin')
+    return response(403, { error: 'Aktuelle Sitzung und gegebenenfalls MFA-Bestätigung erforderlich.' });
 
   let body: { action?: string; email?: string; role?: string; userId?: string };
   try { body = await request.json(); }

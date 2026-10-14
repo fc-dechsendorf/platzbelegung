@@ -3,19 +3,23 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../src/cloud-entry.js'), 'utf8').replace(/^import .*?;\s*/m, '');
-function fixture(role = '') {
-  let current = role ? { user: { id: 'one', app_metadata: { fcd_role: role } } } : null;
+function fixture(role = '', owner = false) {
+  const id = owner ? '25f4325b-18d1-40ba-9645-8fec15ea5855' : 'one';
+  const token = aal => 'h.' + Buffer.from(JSON.stringify({ aal })).toString('base64url') + '.s';
+  let mfa = { required: true, strong: false, blocked: true };
+  let current = role ? { access_token: token('aal1'), user: { id, app_metadata: { fcd_role: role } } } : null;
   const calls = [];
   let callback;
   let failPublic = false;
   let privateDenied = false;
   const pub = { id: 'approved', team: 'Gastmannschaft', event_date: '2026-10-14', starts_at: '18:00', ends_at: '19:00', place: 'C', capacity: '1/2', status: 'freigegeben', kind: 'friendly' };
   const client = {
+    functions: { invoke: async () => ({ data: mfa }) },
     auth: {
       getSession: async () => ({ data: { session: current } }),
       onAuthStateChange: (cb) => { callback = cb; },
       signOut: async () => { current = null; return { error: null }; },
-      signInWithPassword: async () => { current = { user: { id: 'one', app_metadata: { fcd_role: 'admin' } } }; return { data: { session: current } }; }
+      signInWithPassword: async () => { current = { access_token: token('aal1'), user: { id, app_metadata: { fcd_role: 'admin' } } }; return { data: { session: current } }; }
     },
     from: (table) => ({ select: async () => {
       calls.push(table);
@@ -26,7 +30,8 @@ function fixture(role = '') {
     rpc: async (name) => ({ data: name === 'public_schedule_events' ? [pub] : [{ target_id: 'bfv-1', team: 'Gastmannschaft', place: 'B' }], error: failPublic ? new Error('offline') : null })
   };
   const window = { location: { hash: '', search: '' }, AppData: { trainingRules: [], mowingDates: new Set(), bfvGames: [] } };
-  vm.runInNewContext(source, { window, createClient: () => client, URLSearchParams, setTimeout: () => {} });
+  window.WebsiteMFA = { authenticate: async () => { current.access_token = token('aal2'); mfa = { required: true, strong: true, blocked: false }; }, mount: () => {} };
+  vm.runInNewContext(source, { window, createClient: () => client, URLSearchParams, atob, setTimeout: () => {} });
   return { cloud: window.Cloud, calls, authChange: (s) => callback('SIGNED_OUT', s),
     fail: () => { failPublic = true; }, denyPrivate: () => { privateDenied = true; } };
 }
@@ -42,6 +47,16 @@ for (const role of ['', 'board', 'admin', 'manager']) test(`Kalenderprojektion u
   assert.equal(f.calls.includes('event_overrides'), role === 'admin');
   assert.equal(requests[0].note, ['admin', 'manager'].includes(role) ? 'INTERN' : undefined);
   assert.equal(f.cloud.read('sg-overrides')['bfv-1'].note, role === 'admin' ? 'INTERN' : undefined);
+});
+
+test('Owner AAL1 loads public projection only until MFA login completes', async () => {
+  const f = fixture('admin', true); await f.cloud.initialize();
+  assert.equal(f.cloud.role(), '');
+  assert.equal(f.calls.includes('schedule_requests'), false);
+  assert.equal(f.cloud.read('sg-requests')[0].note, undefined);
+  await f.cloud.login('owner', 'password');
+  assert.equal(f.cloud.role(), 'admin');
+  assert.equal(f.cloud.read('sg-requests')[0].note, 'INTERN');
 });
 test('Anmeldung lädt private Daten; Abmeldung entfernt sie auch bei Netzfehler', async () => {
   const f = fixture(); await f.cloud.initialize(); await f.cloud.login('x', 'x');
