@@ -54,7 +54,12 @@ async function load() {
     ].map((row) => [row.id, row])).values()];
   }
   if (role() === 'admin') {
-    rows.event_overrides = check(await client.from('event_overrides').select('*'));
+    const privateOverrides = check(await client.from('event_overrides').select('*'));
+    // A revoked or outdated session receives no private rows. Keep the public
+    // effective appointment changes available in that case.
+    rows.event_overrides = [...new Map([
+      ...rows.event_overrides, ...privateOverrides
+    ].map((row) => [row.target_id, row])).values()];
   }
   window.AppData.trainingRules.splice(0, window.AppData.trainingRules.length,
     ...rows.training_rules.filter((row) => row.active).map((row) => [
