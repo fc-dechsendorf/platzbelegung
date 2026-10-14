@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/cloud-entry.js --bundle --minify --format=iife --outfile=scripts/cloud.js",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "dependencies": { "@supabase/supabase-js": "2.117.0" },
+  "devDependencies": { "esbuild": "0.25.12" }
+}

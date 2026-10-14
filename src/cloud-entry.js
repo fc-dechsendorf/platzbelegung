@@ -39,9 +39,23 @@ const check = ({ data, error }) => { if (error) throw error; return data; };
 
 async function load() {
   const tables = ['training_rules', 'mowing_dates', 'bfv_sources', 'bfv_games',
-    'schedule_requests', 'event_overrides', 'event_deletions', 'place_blocks'];
+    'event_deletions', 'place_blocks'];
   const results = await Promise.all(tables.map((table) => client.from(table).select('*')));
   const rows = Object.fromEntries(tables.map((table, i) => [table, check(results[i])]));
+  const [publicRequests, publicOverrides] = await Promise.all([
+    client.rpc('public_schedule_events'), client.rpc('public_event_overrides')
+  ]);
+  rows.schedule_requests = check(publicRequests);
+  rows.event_overrides = check(publicOverrides);
+  if (['admin', 'manager'].includes(role())) {
+    const privateRequests = check(await client.from('schedule_requests').select('*'));
+    rows.schedule_requests = [...new Map([
+      ...rows.schedule_requests, ...privateRequests
+    ].map((row) => [row.id, row])).values()];
+  }
+  if (role() === 'admin') {
+    rows.event_overrides = check(await client.from('event_overrides').select('*'));
+  }
   window.AppData.trainingRules.splice(0, window.AppData.trainingRules.length,
     ...rows.training_rules.filter((row) => row.active).map((row) => [
       row.team, ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][row.weekday - 1],
@@ -196,7 +210,18 @@ async function initializeAuth() {
     (session.user?.user_metadata?.fcd_password_setup_pending !== false &&
       (authFlow === 'invite' || authFlow === 'recovery'))));
   if (!authInitialized) {
-    client.auth.onAuthStateChange((_event, current) => { session = current; });
+    client.auth.onAuthStateChange((_event, current) => {
+      const changed = session?.user?.id !== current?.user?.id ||
+        session?.user?.app_metadata?.fcd_role !== current?.user?.app_metadata?.fcd_role;
+      session = current;
+      if (changed) {
+        state['sg-requests'] = [];
+        state['sg-overrides'] = {};
+        // A different tab can sign out or change the active account.
+        // Reload outside the auth callback, without waiting on auth methods.
+        if (loaded) setTimeout(() => window.location?.reload?.(), 0);
+      }
+    });
     authInitialized = true;
   }
   return session;
@@ -218,11 +243,16 @@ async function login(email, password) {
     session = null;
     throw new Error('Für dieses Konto ist noch keine Berechtigung eingerichtet.');
   }
+  if (loaded) await load();
   return role();
 }
 async function logout() {
   check(await client.auth.signOut());
   session = null;
+  // Clear private data before any network request, including a failed reload.
+  state['sg-requests'] = [];
+  state['sg-overrides'] = {};
+  if (loaded) await load();
 }
 async function updatePassword(password) {
   if (!session) throw new Error('Einladungslink oder Anmeldung erforderlich.');

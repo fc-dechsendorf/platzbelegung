@@ -1,0 +1,25 @@
+# Kalenderzugriff – 14. Oktober 2026
+
+Die Website wird produktiv genutzt. Beide SQL-Dateien sind einmalige, gezielte Migrationen und ersetzen keine vollständige Schemaeinrichtung.
+
+Reihenfolge: `calendar_public_access.sql`, Frontend bauen und veröffentlichen, veröffentlichtes Bundle prüfen, danach `calendar_private_access.sql`. `hallenbelegung.sql` nicht erneut ausführen. Die Migrationen ändern keine Vereinsdaten.
+
+Öffentliche Besucher und angemeldete Benutzer verwenden `public_schedule_events()` und `public_event_overrides()`. Freigegebene Termine enthalten Mannschaft, Datum, Uhrzeiten, Platz, Kapazität, Terminart und Zugehörigkeit. Der Status ist die feste öffentliche Aussage „freigegeben“. Interne Aktion, Zielkennung des Antrags, Notiz, Erstellerkennung und Erstellungszeit fehlen. Wirksame Terminänderungen enthalten die stabile Terminreferenz und die Kalenderwerte, keine Notiz.
+
+Direktes Lesen der Ursprungstabellen ist für Besucher entzogen. Angemeldete Benutzer erhalten über RLS nur als Admin alle Anträge/Änderungen; Abteilungsleitungen dürfen eigene Anträge lesen. Vorstand und Konten ohne Vereinsberechtigung erhalten keine internen Zeilen. Bestehende Schreibregeln bleiben erhalten.
+
+Die öffentlichen Funktionen sind absichtlich SECURITY DEFINER: Die aufrufenden Rollen dürfen die privaten Ursprungstabellen nicht öffentlich lesen. Eigentümer ist ausschließlich `fcd_calendar_reader`, NOLOGIN, NOINHERIT, ohne BYPASSRLS und ohne Schreibrechte. Dieses Konto besitzt nur SELECT auf ausdrücklich aufgezählten öffentlichen Spalten. Es kann insbesondere `note`, `created_by`, `created_at`, `action` und die Antrags-Zielkennung nicht lesen. Eine separate RLS-Policy beschränkt Anträge auf `freigegeben`. Suchpfad ist fest `pg_catalog`, Tabellen sind schemaqualifiziert, keine Argumente und kein dynamisches SQL. Anonyme Ausführung ist ausdrücklich beabsichtigt. Der Advisor meldet deshalb zwei Warnungen je Aufruferrolle; die Begründung und die Rechte des Eigentümers müssen bei Änderungen erneut geprüft werden.
+
+Hallentabellen: anon SELECT; authenticated SELECT und INSERT/UPDATE/DELETE auf Buchungen, nur SELECT/UPDATE auf Einstellungen. RLS beschränkt Änderungen weiterhin auf Admin. TRUNCATE, TRIGGER, REFERENCES und MAINTAIN sind entfernt.
+
+Default Privileges für vom Anwendungseigentümer postgres neu erzeugte public-Tabellen, Sequenzen und Funktionen gewähren keine automatischen Browserrechte mehr. Das globale PUBLIC-EXECUTE-Default für neue postgres-Funktionen ist entzogen. Neue Anwendungsobjekte benötigen explizite Grants und RLS. Verwaltete Defaults von supabase_admin sowie auth/storage/graphql bleiben unverändert; sie sind kein Freibrief für neue Anwendungsobjekte.
+
+Frontend: öffentliche Daten immer aus den Projektionen; private Anträge für Admin/Abteilungsleitung ergänzen, private Overrides nur für Admin. Anmeldung lädt erneut; Abmeldung leert private Daten auch bei Netzfehler und schließt ein geöffnetes Infofenster. Änderungen der Sitzung in einem anderen Tab leeren den Cache und laden die Seite neu. HTML-Versionen verhindern die normale Wiederverwendung eines alten Bundles. Bereits geöffnete alte Tabs müssen neu geladen werden.
+
+Backup: vorheriger Git-Stand c0928f3df87213035e736d9f29c2548a27fd42e3 ist erhalten. Lokaler Snapshot von Policies, ACLs, Defaults und Funktionsdefinitionen liegt beim Arbeitsbericht. Das ist kein vollständiges Datenbankbackup. Organisation nutzt Free; verfügbare wiederherstellbare Backups konnten mit dem Connector nicht aufgelistet werden. Regulären CLI/pg_dump-Export mit sicher verwahrtem Datenbankzugang, externer Ablage und Wiederherstellungstest einrichten. Keine Auth- oder Nutzerdaten im öffentlichen Repository sichern.
+
+Tests: SQL-Vorprüfung führt die zweite Migration innerhalb einer Transaktion aus, prüft anon/authenticated/board/disabled/manager/admin, Eigentümerschaft, öffentlichen Kalender sowie Hallensichtbarkeit und rollt sämtliche Änderungen zurück. Frontend-Tests prüfen öffentliche Feldwerte, private Ergänzung, Anmeldung und Cachelöschung bei Abmeldung/Netzfehler. Zwei vorhandene Tests in statistik/trainingsplan schlagen auch im unveränderten Basisstand fehl; separat beheben. Rollen-Simulation ersetzt keine vollständige Anmeldung mit echten Konten.
+
+Offen: MFA bei beiden Administratoren (0 verifizierte Faktoren), besonders Hauptadministrator einrichten und serverseitig durchsetzen. Tokenlaufzeit und sofortige Sperrwirkung prüfen; JWT-app_metadata können bis zur Erneuerung alte Rechte enthalten. Sitzungswiderruf und gegebenenfalls aktuelle serverseitige Rollen-/Sitzungsprüfung planen. Leaked Password Protection ist laut Advisor deaktiviert; Tarifverfügbarkeit prüfen. Vollbackup und Wiederherstellungstest fehlen. Bootstrap-Endpoint getrennt bereinigen.
+
+Quellen: https://supabase.com/docs/guides/platform/backups ; https://supabase.com/docs/guides/auth/row-level-security ; https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable
