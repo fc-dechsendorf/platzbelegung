@@ -34,5 +34,6 @@ test('Administrator kann Standardtraining sehen und bearbeiten', async () => {
 test('Abteilungsleitung erhält keinen Trainingsplan-Editor', async () => {
   const html = await page('manager');
   assert.doesNotMatch(html, /data-training-form/);
-  assert.match(html, /Nur Administratoren/);
+  assert.match(html, /Keine Berechtigung/);
+  assert.match(html, /kann nur von Administratoren bearbeitet werden/);
 });

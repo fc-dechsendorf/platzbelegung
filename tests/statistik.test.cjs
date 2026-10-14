@@ -20,7 +20,8 @@ async function page(user) {
   };
   const context = {
     document: { getElementById: () => app },
-    window: { Cloud: { client, initializeAuth: async () => {}, needsPasswordSetup: false } },
+    window: { Cloud: { client, initializeAuth: async () => {},
+      role: () => user?.app_metadata?.fcd_role || '', needsPasswordSetup: false } },
     Date: class extends Date { constructor(...args) { super(...(args.length ? args : ['2026-10-05T12:00:00Z'])); } },
     Intl, Map, Math, Number, Object, String, Promise
   };
