@@ -68,5 +68,17 @@ for (const kind of ['game', 'training']) {
     assert.equal(state.saved[0].status, 'beantragt');
     assert.match(app.innerHTML, /Beantragter Termin/);
   });
+
+  test(`Abteilungsleitung kann Löschung für ${kind === 'game' ? 'BFV-Spiel' : 'Training'} beantragen`, async () => {
+    const { app, eventButton, handlers, state } = await setup(kind);
+    eventButton.onclick();
+    assert.match(app.innerHTML, /data-delete-request-event/);
+    await handlers.get('[data-delete-request-event]')();
+    assert.equal(state.saved.length, 1);
+    assert.equal(state.saved[0].id, undefined);
+    assert.equal(state.saved[0].targetId, eventButton.dataset.event);
+    assert.equal(state.saved[0].action, 'delete');
+    assert.equal(state.saved[0].status, 'beantragt');
+  });
 }
 
