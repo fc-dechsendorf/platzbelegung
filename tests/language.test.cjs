@@ -24,6 +24,7 @@ async function setup(stored = null, options = {}) {
     read: (key, fallback) => key === 'sg-overrides' ? (options.overrides || fallback) : fallback };
   vm.createContext(context);
   for (const file of ['data.js', 'language.js', 'game-title.js', 'schedule-filter.js']) vm.runInContext(fs.readFileSync(path.join(scripts, file), 'utf8'), context);
+  context.AppData.archeryRules.push({ id: 'test', weekday: 3, from: '17:30', to: '19:00', seasonStartMonth: 4, seasonEndMonth: 9 });
   if (options.game) context.AppData.bfvGames.push(options.game);
   vm.runInContext(fs.readFileSync(path.join(scripts, 'calendar.js'), 'utf8'), context);
   await new Promise(setImmediate);
@@ -73,7 +74,7 @@ test('English event details translate fixed labels and leave a custom note untou
 });
 
 test('Spanish archery details explain the shared C pitch in Spanish', async () => {
-  const state = await setup('es', { eventId: 'archery-2026-09-23', eventDate: '2026-09-23' });
+  const state = await setup('es', { eventId: 'archery-test-2026-09-23', eventDate: '2026-09-23' });
   state.openEvent();
   assert.match(state.app.innerHTML, /<dt>Fecha<\/dt>/);
   assert.match(state.app.innerHTML, /Zona de seguridad acordada en 1\/2 campo C/);

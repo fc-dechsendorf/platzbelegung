@@ -13,6 +13,7 @@ window.AppData = {
     ["Croquet", "Mi", "10:00", "13:00", "A", "vorplatz"], ["Croquet", "Fr", "10:00", "13:00", "A", "vorplatz"],
     ["Atletico", "Di", "19:00", "22:00", "C", "voll"], ["Atletico", "Do", "19:00", "22:00", "C", "voll"]
   ],
+  archeryRules: [],
   mowingDates: new Set(["2026-09-14", "2026-09-18", "2026-09-24", "2026-09-30"]),
   bfvGames: []
 };

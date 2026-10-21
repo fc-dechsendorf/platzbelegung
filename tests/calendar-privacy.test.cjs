@@ -29,7 +29,7 @@ function fixture(role = '', owner = false) {
     } }),
     rpc: async (name) => ({ data: name === 'public_schedule_events' ? [pub] : [{ target_id: 'bfv-1', team: 'Gastmannschaft', place: 'B' }], error: failPublic ? new Error('offline') : null })
   };
-  const window = { location: { hash: '', search: '' }, AppData: { trainingRules: [], mowingDates: new Set(), bfvGames: [] } };
+  const window = { location: { hash: '', search: '' }, AppData: { trainingRules: [], archeryRules: [], mowingDates: new Set(), bfvGames: [] } };
   window.WebsiteMFA = { authenticate: async () => { current.access_token = token('aal2'); mfa = { required: true, strong: true, blocked: false }; }, mount: () => {} };
   vm.runInNewContext(source, { window, createClient: () => client, URLSearchParams, atob, setTimeout: () => {} });
   return { cloud: window.Cloud, calls, authChange: (s) => callback('SIGNED_OUT', s),

@@ -83,11 +83,14 @@
   function requestedEvents(date) { return read('sg-requests', []).filter((item) => item.date === iso(date)).map((item, index) => ({ id: `request-${item.id || index}`, team: item.team, from: item.from, to: item.to, place: item.place, originalPlace: item.place, type: typeForCapacity(item.capacity), category: item.status === 'freigegeben' ? ({ training: 'Training', league: 'Liga', cup: 'Pokal', friendly: 'Freundschaftsspiel' }[item.kind] || 'Sondertermin') : 'Beantragter Termin', organization: item.organization || 'other', kind: item.kind || 'other', note: item.note || (item.status === 'freigegeben' ? 'Freigegeben' : 'Beantragt'), source: 'Abteilungsleitung', pending: item.status !== 'freigegeben', manual: item.status === 'freigegeben', requestStatus: item.status })); }
   function blockEvents(date) { return read('sg-blocks', []).filter((item) => item.fromDate <= iso(date) && item.toDate >= iso(date)).map((item, index) => ({ id: `block-${item.id || index}`, team: item.title || 'Platz gesperrt', from: '09:00', to: '22:00', place: item.place, originalPlace: item.place, type: 'special', category: 'Platzsperre', note: item.scope, scope: item.scope, source: 'Platzwart', allDay: true })); }
   function archeryEvents(date) {
-    if (date.getMonth() < 3 || date.getMonth() > 8 || !['Mi', 'Fr'].includes(dayName(date))) return [];
-    return [{ id: `archery-${iso(date)}`, team: 'Bogenschützen', from: '17:30', to: '19:00',
+    const weekday = (date.getDay() + 6) % 7 + 1;
+    const month = date.getMonth() + 1;
+    return (window.AppData.archeryRules || []).filter((rule) =>
+      rule.weekday === weekday && month >= rule.seasonStartMonth && month <= rule.seasonEndMonth
+    ).map((rule) => ({ id: `archery-${rule.id}-${iso(date)}`, team: 'Bogenschützen', from: rule.from, to: rule.to,
       place: 'C', originalPlace: 'C', type: 'archery', side: 1, category: 'Bogenschützen-Training',
       source: 'Vereinbarte Bogenschützenzeiten',
-      note: 'Sperrzone auf einer Platzhälfte. Fußballtraining darf parallel stattfinden; Liga-, Pokal- und Freundschaftsspiele haben Vorrang.' }];
+      note: 'Sperrzone auf einer Platzhälfte. Fußballtraining darf parallel stattfinden; Liga-, Pokal- und Freundschaftsspiele haben Vorrang.' }));
   }
   function rawEvents(date) {
     const games = bfvGames.filter((game) => game.date === iso(date)).map((game) => ({ id: game.id, uid: game.uid, team: game.name, from: game.from, to: game.to, place: 'A', originalPlace: 'A', type: 'game', category: game.category, note: `${game.category} · ${game.status}`, source: `BFV-iCal · ${game.source}`, location: game.location, unresolved: game.status === 'Ort offen' }));

@@ -61,7 +61,7 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const check = ({ data, error }) => { if (error) throw error; return data; };
 
 async function load() {
-  const tables = ['training_rules', 'mowing_dates', 'bfv_sources', 'bfv_games',
+  const tables = ['training_rules', 'archery_rules', 'mowing_dates', 'bfv_sources', 'bfv_games',
     'event_deletions', 'place_blocks'];
   const results = await Promise.all(tables.map((table) => client.from(table).select('*')));
   const rows = Object.fromEntries(tables.map((table, i) => [table, check(results[i])]));
@@ -90,6 +90,11 @@ async function load() {
       shortTime(row.starts_at), shortTime(row.ends_at), row.place, typeFromCapacity(row.capacity),
       row.event_key_template, row.valid_from, row.valid_until
     ]));
+  window.AppData.archeryRules.splice(0, window.AppData.archeryRules.length,
+    ...rows.archery_rules.filter((row) => row.active).map((row) => ({
+      id: row.id, weekday: row.weekday, from: shortTime(row.starts_at), to: shortTime(row.ends_at),
+      seasonStartMonth: row.season_start_month, seasonEndMonth: row.season_end_month
+    })));
   window.AppData.mowingDates.clear();
   rows.mowing_dates.forEach((row) => window.AppData.mowingDates.add(row.mowing_date));
   mowing = rows.mowing_dates.map((row) => ({
@@ -356,6 +361,38 @@ async function setTrainingRuleActive(id, active) {
   return rows[0];
 }
 
+async function listArcheryRules() {
+  if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');
+  return check(await client.from('archery_rules').select('*'));
+}
+async function saveArcheryRule(item) {
+  if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');
+  const row = {
+    weekday: Number(item.weekday), starts_at: item.starts_at, ends_at: item.ends_at,
+    season_start_month: Number(item.season_start_month),
+    season_end_month: Number(item.season_end_month), active: Boolean(item.active)
+  };
+  const quarterHour = /^([01]\d|2[0-3]):(00|15|30|45)$/;
+  if (!Number.isInteger(row.weekday) || row.weekday < 1 || row.weekday > 7 ||
+      !quarterHour.test(row.starts_at) || !quarterHour.test(row.ends_at) ||
+      row.starts_at >= row.ends_at ||
+      !Number.isInteger(row.season_start_month) || row.season_start_month < 1 || row.season_start_month > 12 ||
+      !Number.isInteger(row.season_end_month) || row.season_end_month < row.season_start_month || row.season_end_month > 12)
+    throw new Error('Bitte Wochentag, Viertelstunden und Saisonmonate prüfen.');
+  const result = item.id
+    ? await client.from('archery_rules').update(row).eq('id', item.id).select()
+    : await client.from('archery_rules').insert(row).select();
+  const saved = check(result);
+  if (saved.length !== 1) throw new Error('Bogenschützenzeit wurde nicht gespeichert. Bitte die Seite neu laden.');
+  return saved[0];
+}
+async function setArcheryRuleActive(id, active) {
+  if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');
+  const rows = check(await client.from('archery_rules').update({ active }).eq('id', id).select());
+  if (rows.length !== 1) throw new Error('Bogenschützenzeit wurde nicht geändert. Bitte die Seite neu laden.');
+  return rows[0];
+}
+
 async function listManagers() {
   return (await manageUsers('list')).users.filter((user) => user.role === 'manager');
 }
@@ -412,6 +449,7 @@ window.Cloud = { client, initialize, initializeAuth, load, read, save, role, log
   get authError() { return authError || (authInitialized && authFlow && !session ? 'invalid_link' : null); },
   updatePassword,
   listTrainingRules, saveTrainingRule, setTrainingRuleActive,
+  listArcheryRules, saveArcheryRule, setArcheryRuleActive,
   get sources() { return clone(sources); },
   get mowing() { return clone(mowing); },
   get lastImport() { return lastImport; },

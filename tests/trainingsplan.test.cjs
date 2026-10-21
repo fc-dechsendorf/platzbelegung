@@ -13,7 +13,10 @@ async function page(role) {
       initializeAuth: async () => {}, role: () => role,
       listTrainingRules: async () => [{ id: 'one', team: 'D-Jugend', weekday: 4,
         starts_at: '17:30:00', ends_at: '19:00:00', place: 'C', capacity: '1/2',
-        organization: 'fcd', active: true, valid_from: null, valid_until: null }]
+        organization: 'fcd', active: true, valid_from: null, valid_until: null }],
+      listArcheryRules: async () => [{ id: 'archery-one', weekday: 3,
+        starts_at: '17:30:00', ends_at: '19:00:00', season_start_month: 4,
+        season_end_month: 9, active: true }]
     } },
     Object, String, Number, Promise
   };
@@ -29,11 +32,15 @@ test('Administrator kann Standardtraining sehen und bearbeiten', async () => {
   assert.match(html, /17:30–19:00/);
   assert.match(html, /data-training-form/);
   assert.match(html, /Pausieren/);
+  assert.match(html, /data-archery-form/);
+  assert.match(html, /Bogenschützen · Außenbereich C/);
+  assert.match(html, /April–September/);
 });
 
 test('Abteilungsleitung erhält keinen Trainingsplan-Editor', async () => {
   const html = await page('manager');
   assert.doesNotMatch(html, /data-training-form/);
+  assert.doesNotMatch(html, /data-archery-form/);
   assert.match(html, /Keine Berechtigung/);
   assert.match(html, /kann nur von Administratoren bearbeitet werden/);
 });
