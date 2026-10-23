@@ -109,7 +109,8 @@ async function load() {
       id: row.id, date: row.game_date, from: shortTime(row.starts_at),
       to: shortTime(row.ends_at), name: row.name, category: row.category,
       status: row.status, place: row.place, location: row.location,
-      source: row.source, sourceIds: row.source_ids, uid: row.uid
+      source: row.source, sourceIds: row.source_ids, uid: row.uid,
+      missingFromFeed: row.missing_from_feed
     })));
   lastImport = rows.bfv_games.reduce((latest, row) =>
     row.imported_at > latest ? row.imported_at : latest, '');
@@ -218,20 +219,8 @@ async function saveSources(items) {
 async function importGames(snapshot) {
   if (role() !== 'admin') throw new Error('Nur Administratoren dürfen BFV-Daten importieren.');
   if (snapshot.errors?.length) throw new Error('Mindestens eine BFV-Quelle ist nicht erreichbar.');
-  const rows = snapshot.games.map((game) => ({
-    id: game.id, game_date: game.date, starts_at: game.from, ends_at: game.to,
-    name: game.name, category: game.category, status: game.status,
-    place: game.place, location: game.location, source: game.source,
-    source_ids: game.sourceIds, uid: game.uid, imported_at: snapshot.importedAt
-  }));
-  for (let i = 0; i < rows.length; i += 100)
-    check(await client.from('bfv_games').upsert(rows.slice(i, i + 100)).select());
-  const existing = check(await client.from('bfv_games').select('id')).map((row) => row.id);
-  const current = new Set(rows.map((row) => row.id));
-  const stale = existing.filter((id) => !current.has(id));
-  for (let i = 0; i < stale.length; i += 100)
-    check(await client.from('bfv_games').delete().in('id', stale.slice(i, i + 100)).select());
-  await load();
+  // Alle Importe laufen durch dieselbe serverseitige, historienbewahrende Logik.
+  return refreshBfv();
 }
 
 async function initializeAuth() {
@@ -428,7 +417,8 @@ async function refreshBfv() {
   const { data, error } = await client.functions.invoke('refresh-bfv', { body: {} });
   if (error || data?.error) throw new Error(data?.error || error.message);
   await load();
-  return { games: window.AppData.bfvGames, importedAt: data.importedAt };
+  return { games: window.AppData.bfvGames, importedAt: data.importedAt,
+    archived: data.archived, missingFuture: data.missingFuture };
 }
 async function addMowing(date, note) {
   if (role() !== 'admin') throw new Error('Administratorrechte erforderlich.');

@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.0';
+import { reconcileGames } from './reconcile.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,13 @@ const projectUrl = Deno.env.get('SUPABASE_URL') || '';
 const secretKeys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}');
 const serviceKey = secretKeys.default || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const cronTokenSha256 = 'b358a69a1fac75e3553a5ff124bd61003a19af1ea61b18b90a01c459e38c4478';
+const berlinNow = () => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
 const homeLocation = (location: string) => {
   const cleaned = location.toLowerCase().normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss')
@@ -139,20 +147,29 @@ Deno.serve(async (request) => {
     }
   }
   if (!games.size) return reply(502, { error: 'BFV liefert keine gültigen Termine; Daten bleiben erhalten.' });
+  const { data: old, error: oldError } = await admin.from('bfv_games')
+    .select('id,game_date,ends_at');
+  if (oldError) return reply(502, { error: oldError.message });
   const importedAt = new Date().toISOString();
-  const rows = [...games.values()].map((game) => ({ ...game, imported_at: importedAt }));
+  const plan = reconcileGames(old || [], [...games.values()], berlinNow());
+  const rows = plan.upserts.map((game) => ({ ...game, missing_from_feed: false, imported_at: importedAt }));
   for (let index = 0; index < rows.length; index += 100) {
     const { error } = await admin.from('bfv_games').upsert(rows.slice(index, index + 100));
     if (error) return reply(502, { error: error.message });
   }
-  const { data: old, error: oldError } = await admin.from('bfv_games').select('id');
-  if (oldError) return reply(502, { error: oldError.message });
-  const activeIds = new Set(rows.map((game) => game.id));
-  const stale = (old || []).map((game) => game.id).filter((id) => !activeIds.has(id));
-  for (let index = 0; index < stale.length; index += 100) {
-    const { error } = await admin.from('bfv_games').delete().in('id', stale.slice(index, index + 100));
+  for (let index = 0; index < plan.retainedIds.length; index += 100) {
+    const { error } = await admin.from('bfv_games')
+      .update({ missing_from_feed: false, imported_at: importedAt })
+      .in('id', plan.retainedIds.slice(index, index + 100));
     if (error) return reply(502, { error: error.message });
   }
-  return reply(200, { importedAt, games: rows.length, removed: stale.length });
+  for (let index = 0; index < plan.futureMissingIds.length; index += 100) {
+    const { error } = await admin.from('bfv_games')
+      .update({ missing_from_feed: true, imported_at: importedAt })
+      .in('id', plan.futureMissingIds.slice(index, index + 100));
+    if (error) return reply(502, { error: error.message });
+  }
+  return reply(200, { importedAt, games: games.size, archived: plan.archived,
+    missingFuture: plan.missingFuture });
 });
 

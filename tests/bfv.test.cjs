@@ -6,14 +6,17 @@ const vm = require('node:vm');
 
 const scripts = path.join(__dirname, '..', 'scripts');
 
-function appContext() {
+function appContext(at = null) {
+  class FixedDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [at])); }
+  }
   const values = new Map();
   const storage = {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => values.set(key, String(value)),
     removeItem: (key) => values.delete(key)
   };
-  const context = { Date, Intl, Map, Set, URL, localStorage: storage, sessionStorage: storage };
+  const context = { Date: at ? FixedDate : Date, Intl, Map, Set, URL, localStorage: storage, sessionStorage: storage };
   context.window = context;
   vm.createContext(context);
   const run = (file) => vm.runInContext(fs.readFileSync(path.join(scripts, file), 'utf8'), context);
@@ -219,7 +222,7 @@ test('zwei bestätigte Jugendspiele können je 1/2 Platz gleichzeitig nutzen', a
 });
 
 test('eine bestätigte BFV-Verlegung ersetzt den alten Kalendereintrag ohne zweite Spiel-ID', async () => {
-  const { context, run } = appContext();
+  const { context, run } = appContext('2026-09-28T08:00:00+02:00');
   const original = { id: 'bfv-same-id', uid: 'same-id', date: '2026-09-28', from: '19:00', to: '20:30',
     name: 'FC Dechsendorf - Gast', source: 'Herren', category: 'Liga', status: 'Heimspiel',
     place: 'A', location: 'Sportanlage Erlangen Campingstrasse 38, 91056 Erlangen' };
@@ -298,8 +301,8 @@ test('Texte aus BFV-Terminen werden in der Detailansicht sicher angezeigt', asyn
 });
 
 test('manuell übernommene Termine und Änderungen sind markiert, offene Anträge bleiben orange', async () => {
-  const { context, run } = appContext();
-  const today = new Date();
+  const { context, run } = appContext('2026-10-19T08:00:00+02:00');
+  const today = new context.Date();
   const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
   const date = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
   const gameButton = { dataset: { event: 'bfv-manual', date } };
@@ -343,8 +346,8 @@ test('manuell übernommene Termine und Änderungen sind markiert, offene Anträg
 });
 
 test('bestätigte BFV-Verlegung bleibt bei noch altem BFV-Termin gelb', async () => {
-  const { context, run } = appContext();
-  const now = new Date();
+  const { context, run } = appContext('2026-10-19T08:00:00+02:00');
+  const now = new context.Date();
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
   const date = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
   const gameButton = { dataset: { event: 'bfv-color', date } };
@@ -368,6 +371,35 @@ test('bestätigte BFV-Verlegung bleibt bei noch altem BFV-Termin gelb', async ()
   gameButton.onclick();
   assert.match(app.innerHTML, /class="event voll manual"[^>]*><b>Ligaspiel<\/b>/);
   assert.match(app.innerHTML, /Vereinsverlegung bestätigt · BFV-Abgleich ausstehend/);
+});
+
+test('vergangene BFV-Spiele bleiben blau oder manuell gelb; nur künftige fehlende Spiele werden rot', async () => {
+  const { context, run } = appContext('2026-10-23T17:00:00+02:00');
+  const gameButton = { dataset: { event: 'bfv-past-manual', date: '2026-10-21' } };
+  const app = { innerHTML: '', querySelectorAll: (selector) => selector === '[data-event]' ? [gameButton] : [],
+    querySelector: () => null };
+  context.document = { getElementById: () => app };
+  run('data.js');
+  context.AppData.bfvGames.push(
+    { id: 'bfv-past', date: '2026-10-21', from: '11:00', to: '12:30', name: 'Gespieltes Ligaspiel',
+      source: 'Herren', category: 'Liga', status: 'Heimspiel', place: 'A' },
+    { id: 'bfv-future-missing', date: '2026-10-24', from: '13:00', to: '14:30', name: 'Ungeklärtes Ligaspiel',
+      source: 'Herren', category: 'Liga', status: 'Heimspiel', place: 'A', missingFromFeed: true },
+    { id: 'bfv-future-updated', date: '2026-10-24', from: '10:00', to: '11:30', name: 'Verlegtes Ligaspiel',
+      source: 'Herren', category: 'Liga', status: 'Heimspiel', place: 'A' }
+  );
+  const overrides = { 'bfv-past-manual': { team: 'Manuell gespieltes Ligaspiel', date: '2026-10-21',
+    from: '12:45', to: '14:15', place: 'B', type: 'voll' } };
+  context.Cloud = { initialize: async () => ({ importedAt: null, games: [] }), role: () => '',
+    read: (key, fallback) => key === 'sg-overrides' ? overrides : fallback };
+  run('calendar.js');
+  await new Promise(setImmediate);
+  assert.match(app.innerHTML, /class="event game" data-event="bfv-past"/);
+  assert.match(app.innerHTML, /class="event voll manual" data-event="bfv-past-manual"/);
+  assert.match(app.innerHTML, /class="event game unresolved" data-event="bfv-future-missing"/);
+  assert.match(app.innerHTML, /class="event game" data-event="bfv-future-updated"/);
+  gameButton.onclick();
+  assert.doesNotMatch(app.innerHTML, /BFV-Abgleich nötig: Die ID dieses manuell geänderten Spiels fehlt/);
 });
 
 test('Sonderereignisse sind in allen Ansichten lila und manuelle Termine bleiben gelb', () => {

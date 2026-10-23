@@ -11,8 +11,20 @@
   const publicCapacityLabel = (type) => type === 'halb' ? t('halfPitch', '1/2 Platz') : type === 'archery' ? t('archeryHalf', '1/2 C-Platz · Hinweis') : type === 'vorplatz' ? t('forecourt', 'Vorplatz') : type === 'special' ? t('closure', 'Sperre') : t('fullPitch', '1/1 Platz');
   const publicPlace = (place) => language?.place(place) || `${place}-Platz`;
   const displayDayName = (date) => language?.weekday((date.getDay() + 6) % 7) || dayName(date);
+  const berlinNow = () => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+  };
+  const upcoming = (event) => `${event.date}T${String(event.to || '').slice(0, 5)}` > berlinNow();
   let savedBfv = null;
-  const bfvSummary = (snapshot) => `BFV: ${snapshot.games.filter((game) => game.status === 'Heimspiel').length} ${t('bfvHome', 'Heimspiele am Ort')} · ${snapshot.games.filter((game) => game.status === 'Ort offen').length} ${t('bfvUnknown', 'ohne Ortsangabe')} · ${t('asOf', 'Stand')} ${new Date(snapshot.importedAt).toLocaleString(language?.current() === 'en' ? 'en-GB' : language?.current() === 'es' ? 'es-ES' : 'de-DE', { timeZone: 'Europe/Berlin' })}`;
+  const bfvSummary = (snapshot) => {
+    const next = snapshot.games.filter(upcoming);
+    const missing = next.filter((game) => game.missingFromFeed).length;
+    return `BFV: ${next.filter((game) => game.status === 'Heimspiel' && !game.missingFromFeed).length} ${t('bfvHome', 'Heimspiele am Ort')} · ${next.filter((game) => game.status === 'Ort offen' && !game.missingFromFeed).length} ${t('bfvUnknown', 'ohne Ortsangabe')}${missing ? ` · ${missing} ${t('bfvNeedsClarification', 'zur Klärung')}` : ''} · ${t('asOf', 'Stand')} ${new Date(snapshot.importedAt).toLocaleString(language?.current() === 'en' ? 'en-GB' : language?.current() === 'es' ? 'es-ES' : 'de-DE', { timeZone: 'Europe/Berlin' })}`;
+  };
   let bfvMessage = 'Gemeinsame Daten werden geladen';
   const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   const hourMarks = Array.from({ length: 14 }, (_, n) => `${String(n + 9).padStart(2, '0')}:00`);
@@ -93,7 +105,7 @@
       note: 'Sperrzone auf einer Platzhälfte. Fußballtraining darf parallel stattfinden; Liga-, Pokal- und Freundschaftsspiele haben Vorrang.' }));
   }
   function rawEvents(date) {
-    const games = bfvGames.filter((game) => game.date === iso(date)).map((game) => ({ id: game.id, uid: game.uid, team: game.name, from: game.from, to: game.to, place: 'A', originalPlace: 'A', type: 'game', category: game.category, note: `${game.category} · ${game.status}`, source: `BFV-iCal · ${game.source}`, location: game.location, unresolved: game.status === 'Ort offen' }));
+    const games = bfvGames.filter((game) => game.date === iso(date)).map((game) => ({ id: game.id, uid: game.uid, team: game.name, from: game.from, to: game.to, place: 'A', originalPlace: 'A', type: 'game', category: game.category, note: `${game.category} · ${game.status}`, source: `BFV-iCal · ${game.source}`, location: game.location, unresolved: game.status === 'Ort offen', bfvMissing: !!game.missingFromFeed && upcoming(game) }));
     const training = trainingRules.filter((row) => row[1] === dayName(date) &&
       (!row[7] || iso(date) >= row[7]) && (!row[8] || iso(date) <= row[8]))
       .map(([team, , from, to, place, type, eventKey]) => ({
@@ -103,15 +115,20 @@
       }));
     const deleted = new Set(read('sg-deletions', [])), overrides = read('sg-overrides', {}), base = [...blockEvents(date), ...games, ...requestedEvents(date), ...training, ...archeryEvents(date)];
     const officialById = new Map(bfvGames.map((game) => [game.id, game]));
-    const manualState = (id, override) => ({
-      manual: true,
-      bfvPending: officialById.has(id) && (
-        override.date !== officialById.get(id).date ||
-        override.from !== officialById.get(id).from ||
-        override.to !== officialById.get(id).to),
-      bfvMissing: id.startsWith('bfv-') && !officialById.has(id),
-      bfvOfficial: officialById.get(id) || null
-    });
+    const manualState = (id, override) => {
+      const official = officialById.get(id);
+      const effective = { date: override.date || iso(date), to: override.to || official?.to };
+      return {
+        manual: true,
+        bfvPending: !!official && upcoming(effective) && (
+          effective.date !== official.date ||
+          (override.from || official.from) !== official.from ||
+          effective.to !== official.to),
+        bfvMissing: id.startsWith('bfv-') && upcoming(effective) &&
+          (!official || official.missingFromFeed),
+        bfvOfficial: official || null
+      };
+    };
     const current = base.filter((event) => !overrides[event.id] || !overrides[event.id].date || overrides[event.id].date === iso(date)).map((event) => overrides[event.id] ? { ...event, ...overrides[event.id], originalPlace: event.originalPlace, source: `${event.source} · administrativ geändert`, ...manualState(event.id, overrides[event.id]) } : event);
     const movedHere = Object.entries(overrides).filter(([id, override]) => override.date === iso(date) && !base.some((event) => event.id === id)).map(([id, override]) => {
       const official = officialById.get(id);
@@ -264,10 +281,10 @@
   function eventMarkup(event) {
     const editable = role === 'admin' && event.type !== 'archery', requestable = role === 'manager' && event.type !== 'archery';
     const sun = sunsetFor(new Date(`${event.date}T12:00:00`));
-    const bfvCheck = event.bfvPending
-      ? `<p class="bfv-pending">${t('bfvAwaiting', 'Vereinsverlegung bestätigt · BFV-Abgleich ausstehend. Die BFV-ID bleibt gleich; der manuelle Termin gilt bis zur Prüfung. BFV meldet noch:')} ${esc(event.bfvOfficial.date)} · ${esc(event.bfvOfficial.from)}–${esc(event.bfvOfficial.to)}. ${t('bfvNoPlace', 'Eine BFV-Platznummer wird nicht übernommen.')}</p>`
-      : event.bfvMissing
-        ? `<p class="bfv-conflict">${t('bfvGone', 'BFV-Abgleich nötig: Die ID dieses manuell geänderten Spiels fehlt im aktuellen BFV-Abruf. Der manuelle Termin bleibt erhalten.')}</p>`
+    const bfvCheck = event.bfvMissing
+      ? `<p class="bfv-conflict">${event.manual ? t('bfvGone', 'BFV-Abgleich nötig: Die ID dieses manuell geänderten Spiels fehlt im aktuellen BFV-Abruf. Der manuelle Termin bleibt erhalten.') : t('bfvFutureMissing', 'BFV-Abgleich nötig: Dieses bevorstehende Spiel fehlt im aktuellen BFV-Abruf. Bitte klären, ob es stattfindet.')}</p>`
+      : event.bfvPending
+        ? `<p class="bfv-pending">${t('bfvAwaiting', 'Vereinsverlegung bestätigt · BFV-Abgleich ausstehend. Die BFV-ID bleibt gleich; der manuelle Termin gilt bis zur Prüfung. BFV meldet noch:')} ${esc(event.bfvOfficial.date)} · ${esc(event.bfvOfficial.from)}–${esc(event.bfvOfficial.to)}. ${t('bfvNoPlace', 'Eine BFV-Platznummer wird nicht übernommen.')}</p>`
         : '';
     const moveDescription = () => language?.moveDescription(event.originalPlace, event.manual)
       || `${event.manual ? 'manuell' : 'automatisch'} von ${event.originalPlace} verlegt`;
